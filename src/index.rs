@@ -7,6 +7,7 @@
 // except according to those terms.
 
 //! Generational indexes.
+
 use core::marker::PhantomData;
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
@@ -27,7 +28,7 @@ use crate::Incrementable;
 ///
 /// # Type Parameters
 ///
-/// ## G
+/// ## `G`
 ///
 /// `G` is the generation type. `G` is usually a type like [u16] or [u32].
 /// By default, G is a [u16].
@@ -48,7 +49,7 @@ use crate::Incrementable;
 /// would take 2^16 seconds to exhaust an index which is roughly 18 hours. A
 /// [u32] would take 2^32 seconds which is more than 136 years.
 ///
-/// ## I
+/// ## `I`
 ///
 /// `I` is the index type. `I` is usually a type like [usize]. By default, `I`
 /// is a [usize].
@@ -62,28 +63,28 @@ use crate::Incrementable;
 /// concurrent entities may exist. If a [u8] is used, a maximum of `256`
 /// values exist at any point in time.
 ///
-/// ## T
+/// ## `GenIndex`
 ///
-/// `T` is the type which the generational index should be returned as. A tuple
+/// `GenIndex` is the type which the generational index should be returned as. A tuple
 /// like `(I, G)` can be used or a custom type. By default, `(I, G)` is used.
 ///
 /// The generational index type is generally treated like an opaque identifier.
 /// While a tuple is useful, a custom type may be desired so a generational
 /// index is only used with collections which take the custom type.
 ///
-/// For the [alloc][Self::alloc] and [dealloc][Self::dealloc] methods`T` must
+/// For the [alloc][Self::alloc] and [dealloc][Self::dealloc] methods `GenIndex` must
 /// implement:
 ///
-/// * `From<(I, G)> for T`
-/// * `Into<(I, G)> for T`
+/// * `From<(I, G)> for GenIndex`
+/// * `Into<(I, G)> for GenIndex`
 #[derive(Debug)]
-pub struct Allocator<G = u16, I = usize, T = (I, G)> {
+pub struct Allocator<G = u16, I = usize, GenIndex = (I, G)> {
     next_index: Option<I>,
-    avail_gen_indexes: Vec<T>,
+    avail_gen_indexes: Vec<GenIndex>,
     gen_ty: PhantomData<G>,
 }
 
-impl<G, I, T> Allocator<G, I, T> {
+impl<G, I, GenIndex> Allocator<G, I, GenIndex> {
     /// Constructs an allocator with the default index value as the initial value.
     ///
     /// # Examples
@@ -172,7 +173,7 @@ impl<G, I, T> Allocator<G, I, T> {
     }
 }
 
-impl<G, I, T> Default for Allocator<G, I, T>
+impl<G, I, GenIndex> Default for Allocator<G, I, GenIndex>
 where
     I: Default,
 {
@@ -185,9 +186,9 @@ where
     }
 }
 
-impl<G, I, T> Allocator<G, I, T>
+impl<G, I, GenIndex> Allocator<G, I, GenIndex>
 where
-    T: From<(I, G)>,
+    GenIndex: From<(I, G)>,
 {
     /// Returns the next available generational index.
     ///
@@ -236,7 +237,7 @@ where
     /// assert_eq!(gen_index_alloc.alloc(), Some(MyGenIndex { index: 0usize, gen: 0u32 }));
     /// ```
     #[must_use]
-    pub fn alloc(&mut self) -> Option<T>
+    pub fn alloc(&mut self) -> Option<GenIndex>
     where
         G: Default,
         I: Incrementable,
@@ -244,7 +245,7 @@ where
         self.avail_gen_indexes.pop().or_else(|| {
             if let Some(index) = self.next_index.take() {
                 self.next_index = index.next();
-                Some(T::from((index, G::default())))
+                Some(GenIndex::from((index, G::default())))
             } else {
                 None
             }
@@ -343,20 +344,17 @@ where
     /// let gen_index_0_again = gen_index_alloc.alloc();
     /// assert_eq!(gen_index_0_again, Some(MyGenIndex { index: 0usize, gen: 1u32  }));
     /// ```
-    pub fn dealloc(&mut self, gen_index: T) -> Option<&T>
+    pub fn dealloc(&mut self, gen_index: GenIndex) -> Option<&GenIndex>
     where
-        T: Into<(I, G)>,
+        GenIndex: Into<(I, G)>,
         G: Incrementable,
     {
-        // The `gen_index` parameter could be of type `S` where S: Into<(I, G)>
-        // This would allow types which are not of type `T` to be used.
-        // From an API standpoint, this may or may not be desirable.
         let gen_index: (I, G) = gen_index.into();
 
         if let Some(avail_gen_index) = gen_index
             .1
             .next()
-            .map(|new_gen| T::from((gen_index.0, new_gen)))
+            .map(|new_gen| GenIndex::from((gen_index.0, new_gen)))
         {
             self.avail_gen_indexes.push(avail_gen_index);
             self.avail_gen_indexes.last()

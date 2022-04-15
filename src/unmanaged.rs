@@ -8,6 +8,8 @@
 
 //! `Vec` indexed with externally managed generational indexes.
 
+use core::marker::PhantomData;
+
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
@@ -33,11 +35,11 @@ use crate::Error;
 ///
 /// # Type Parameters
 ///
-/// ## T
+/// ## `T`
 ///
 /// `T` is the element value type like the `T` in `Vec<T>`.
 ///
-/// ## G
+/// ## `G`
 ///
 /// `G` is the generation type. `G` is usually a type like [u16] or [u32].
 /// By default, G is a [u16].
@@ -57,27 +59,50 @@ use crate::Error;
 /// would take 2^16 seconds to exhaust an index which is roughly 18 hours. A
 /// [u32] would take 2^32 seconds which is more than 136 years.
 ///
-/// ## I
+/// ## `I`
 ///
 /// `I` is the index type required in most functions. `I` is turned into a
-/// [usize] to index into the inner `Vec`.
+/// [usize] to index into the inner `Vec`. By default, `I` is a [usize].
 ///
 /// Index types must implement:
 ///
 /// * `Into<usize>`
+///
+/// The range of values for `I` determines the maximum limit on how many
+/// concurrent entities may exist. If a [u8] is used, a maximum of `256`
+/// values exist at any point in time.
+///
+/// ## `GenIndex`
+///
+/// `GenIndex` is the type which the generational index should be. A tuple
+/// like `(I, G)` can be used or a custom type. By default, `(I, G)` is used.
+///
+/// The generational index type is generally treated like an opaque identifier.
+/// While a tuple is useful, a custom type may be desired so a generational
+/// index is only used with collections which take the custom type.
+///
+/// `GenIndex` types must implement:
+///
+/// * `Into<(I, G)> for GenIndex`
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(clippy::module_name_repetitions)]
-pub struct UnmanagedGenVec<T, G = u16> {
+pub struct UnmanagedGenVec<T, G = u16, I = usize, GenIndex = (usize, u16)> {
     inner: Vec<(G, T)>,
+    index_ty: PhantomData<I>,
+    gen_index_ty: PhantomData<GenIndex>,
 }
 
-impl<T, G> UnmanagedGenVec<T, G> {
+impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Constructs a new inner [`Vec`].
     ///
     /// See [`Vec::new`] for additional information.
     #[must_use]
     pub fn new() -> Self {
-        Self { inner: Vec::new() }
+        Self {
+            inner: Vec::new(),
+            index_ty: PhantomData,
+            gen_index_ty: PhantomData,
+        }
     }
 
     /// Constructs an inner [`Vec`] with the given capacity.
@@ -87,6 +112,8 @@ impl<T, G> UnmanagedGenVec<T, G> {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             inner: Vec::with_capacity(capacity),
+            index_ty: PhantomData,
+            gen_index_ty: PhantomData,
         }
     }
 
@@ -129,15 +156,17 @@ impl<T, G> UnmanagedGenVec<T, G> {
     }
 }
 
-impl<T, G> Default for UnmanagedGenVec<T, G> {
+impl<T, G, I, GenIndex> Default for UnmanagedGenVec<T, G, I, GenIndex> {
     fn default() -> Self {
         Self {
             inner: Vec::default(),
+            index_ty: PhantomData,
+            gen_index_ty: PhantomData,
         }
     }
 }
 
-impl<T, G> UnmanagedGenVec<T, G> {
+impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Pushes a generation and value to the end of the inner [`Vec`].
     ///
     /// See [`Vec::push`] for additional information.
@@ -146,8 +175,9 @@ impl<T, G> UnmanagedGenVec<T, G> {
     }
 
     /// Returns true if an element exists for the generational index.
-    pub fn contains_index<I>(&self, gen_index: (I, G)) -> bool
+    pub fn contains_index(&self, gen_index: GenIndex) -> bool
     where
+        GenIndex: Into<(I, G)>,
         I: Into<usize>,
         G: PartialEq,
     {
@@ -164,11 +194,13 @@ impl<T, G> UnmanagedGenVec<T, G> {
     ///
     /// * the index is out of bounds
     /// * the generation of the generational index is less than the generation associated with the element
-    pub fn get<I>(&self, gen_index: (I, G)) -> Result<&T, Error>
+    pub fn get(&self, gen_index: GenIndex) -> Result<&T, Error>
     where
+        GenIndex: Into<(I, G)>,
         I: Into<usize>,
         G: PartialEq,
     {
+        let gen_index = gen_index.into();
         self.inner
             .get(gen_index.0.into())
             .ok_or_else(Error::index_out_of_bounds)
@@ -186,11 +218,13 @@ impl<T, G> UnmanagedGenVec<T, G> {
     ///
     /// * the index is out of bounds
     /// * the generation of the generational index is less than the generation associated with the element
-    pub fn get_mut<I>(&mut self, gen_index: (I, G)) -> Result<&mut T, Error>
+    pub fn get_mut(&mut self, gen_index: GenIndex) -> Result<&mut T, Error>
     where
+        GenIndex: Into<(I, G)>,
         I: Into<usize>,
         G: PartialEq,
     {
+        let gen_index = gen_index.into();
         let elem = self
             .inner
             .get_mut(gen_index.0.into())
@@ -209,10 +243,12 @@ impl<T, G> UnmanagedGenVec<T, G> {
     /// # Safety
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
-    pub unsafe fn get_unchecked<I>(&self, gen_index: (I, G)) -> &T
+    pub unsafe fn get_unchecked(&self, gen_index: GenIndex) -> &T
     where
+        GenIndex: Into<(I, G)>,
         I: Into<usize>,
     {
+        let gen_index = gen_index.into();
         &self.inner.get_unchecked(gen_index.0.into()).1
     }
 
@@ -223,17 +259,19 @@ impl<T, G> UnmanagedGenVec<T, G> {
     /// # Safety
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
-    pub unsafe fn get_unchecked_mut<I>(&mut self, gen_index: (I, G)) -> &mut T
+    pub unsafe fn get_unchecked_mut(&mut self, gen_index: GenIndex) -> &mut T
     where
+        GenIndex: Into<(I, G)>,
         I: Into<usize>,
     {
+        let gen_index = gen_index.into();
         &mut self.inner.get_unchecked_mut(gen_index.0.into()).1
     }
 
     /// Returns the generation associated with the element at the index.
     ///
     /// Returns `None` if the index is out of bounds.
-    pub fn get_gen<I>(&self, index: I) -> Option<&G>
+    pub fn get_gen(&self, index: I) -> Option<&G>
     where
         I: Into<usize>,
     {
@@ -267,11 +305,13 @@ impl<T, G> UnmanagedGenVec<T, G> {
     ///
     /// * the index is out of bounds
     /// * the generation of the generational index is less than the generation associated with the element
-    pub fn set<I>(&mut self, gen_index: (I, G), value: T) -> Result<(G, T), Error>
+    pub fn set(&mut self, gen_index: GenIndex, value: T) -> Result<(G, T), Error>
     where
+        GenIndex: Into<(I, G)>,
         G: PartialOrd,
         I: Into<usize>,
     {
+        let gen_index = gen_index.into();
         self.internal_set(gen_index.0.into(), gen_index.1, value)
     }
 
@@ -290,12 +330,13 @@ impl<T, G> UnmanagedGenVec<T, G> {
     /// # Panics
     ///
     /// * if the index is greater than the length of the inner vector
-    pub fn set_or_push<I>(&mut self, gen_index: (I, G), value: T) -> Result<Option<(G, T)>, Error>
+    pub fn set_or_push(&mut self, gen_index: GenIndex, value: T) -> Result<Option<(G, T)>, Error>
     where
+        GenIndex: Into<(I, G)>,
         G: PartialOrd,
         I: Into<usize>,
     {
-        let (index, generation) = gen_index;
+        let (index, generation) = gen_index.into();
         let index = index.into();
         assert!(index <= self.inner.len());
         if index < self.len() {
@@ -319,12 +360,13 @@ impl<T, G> UnmanagedGenVec<T, G> {
     /// * the index is out of bounds
     /// * the generation is less than or equal to the existing generation associated with
     /// the element
-    pub fn set_gen<I>(&mut self, gen_index: (I, G)) -> Result<G, Error>
+    pub fn set_gen(&mut self, gen_index: GenIndex) -> Result<G, Error>
     where
+        GenIndex: Into<(I, G)>,
         G: PartialOrd,
         I: Into<usize>,
     {
-        let (index, generation) = gen_index;
+        let (index, generation) = gen_index.into();
         let elem = self
             .inner
             .get_mut(index.into())
@@ -340,14 +382,16 @@ impl<T, G> UnmanagedGenVec<T, G> {
     }
 }
 
-impl<T, G, I> core::ops::Index<(I, G)> for UnmanagedGenVec<T, G>
+impl<T, G, I, GenIndex> core::ops::Index<GenIndex> for UnmanagedGenVec<T, G, I, GenIndex>
 where
     I: Into<usize>,
+    GenIndex: Into<(I, G)>,
     G: PartialEq,
 {
     type Output = T;
 
-    fn index(&self, gen_index: (I, G)) -> &Self::Output {
+    fn index(&self, gen_index: GenIndex) -> &Self::Output {
+        let gen_index = gen_index.into();
         let idx = gen_index.0.into();
         let (cur_gen, elem) = &self.inner[idx];
         let expected_gen = gen_index.1;

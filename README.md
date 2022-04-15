@@ -20,7 +20,7 @@ use case) can be built.
 
 ```toml
 [dependencies]
-gen_value = "0.1.0"
+gen_value = "0.2.0"
 ```
 
 ## Examples
