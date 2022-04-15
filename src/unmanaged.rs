@@ -28,10 +28,15 @@ use crate::Error;
 /// then the [`Allocator`][crate::index::Allocator] and `UnmanagedGenVec` may be
 /// more useful.
 ///
-/// # Important
+/// # Safety
 ///
 /// The generation at an index in the inner `Vec` should always be greater than or
 /// equal to any generational index's generation for the same index.
+///
+/// If the generation has a maximum value (e.g. `u8::MAX`), then the maximum value
+/// should serve as a tombstone to indicate that the index cannot be used.
+/// Any generational index with the maximum generation should never
+/// be used for any method except [`set_gen`][UnmanagedGenVec::set_gen].
 ///
 /// # Type Parameters
 ///
@@ -50,14 +55,18 @@ use crate::Error;
 ///
 /// The range of values for `G` determines how many generations a single index
 /// can be used. Assume a [u8] is used and a single index is allocated and
-/// deallocated 256 times. After the 256th allocation, the index will never be
+/// deallocated 255 times. After the 255th allocation, the index will never be
 /// allocated again. For [`GenVec`][crate::vec::GenVec], an index which will
 /// never be re-used is essentially equivalent to wasted memory which will not
 /// be reclaimed.
 ///
+/// Note that for a [u8], the maximum value (255) serves as a tombstone marker
+/// indicating that the index can no longer be used (otherwise a generational
+/// index with generation 255 could always access the value).
+///
 /// Assuming a single index is allocated and deallocated every second, a [u16]
-/// would take 2^16 seconds to exhaust an index which is roughly 18 hours. A
-/// [u32] would take 2^32 seconds which is more than 136 years.
+/// would take (2^16 - 1) seconds to exhaust an index which is roughly 18 hours. A
+/// [u32] would take (2^32 - 1) seconds which is more than 136 years.
 ///
 /// ## `I`
 ///

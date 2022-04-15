@@ -41,7 +41,15 @@
 //!
 //! ## Drawbacks
 //!
-//! * Values are not dropped until a new value is set for the index
+//! * Values are not dropped until a new value is set for the index (if ever).
+//! * The maximum generation value serves as a tombstone value. So for a [u8],
+//! an element with `255` as the generation indicates the index's value as
+//! unaccessible. A generational index with `255` as the generation is never
+//! used to access a value. The last generation value being used as a tombstone
+//! value was chosen instead of something like `Option<(G, T)>` for efficiency
+//! purposes (saves some memory and removes a small check). However, the major
+//! drawback is that the last value will never be dropped so if a value has any
+//! logic done during a drop, it will never be executed.
 //! * The `GenVec` does not reclaim unused memory. While the `GenVec` can re-use
 //! indexes with increases in the generation, the length will be equal to at
 //! least the largest number of concurrently active elements during a program's
@@ -53,7 +61,7 @@
 //! maximum number of elements possible in a [`Vec`] (a [usize]). If a single
 //! index is reused through all of the generational cycles, then the index can
 //! no longer be used, so the limit for the maximum number of concurrently active
-//! elements decreases. If a generation is represented with a [u8], imagine 256
+//! elements decreases. If a generation is represented with a [u8], imagine 255
 //! active entities but only 1 entity is ever active at a time. All
 //! of the generations would be exhausted at index `0`, so after that point,
 //! `usize::MAX` - `1` is the theoretical maximum number of concurrently active
@@ -61,9 +69,9 @@
 //! The memory for index `0` is essentially leaked at that point.
 //! * There is a limit to the total number of elements that can ever be stored
 //! by the `GenVec`. If a generation is represented with a [u8], then there are
-//! 256 generations per index. Assume that all indexes can eventually be used
-//! and indexes are represented by a [u32]. Then, 2^8 * 2^32 (2^40) total
-//! elements can ever be stored.
+//! 255 generations per index. Assume that all indexes can eventually be used
+//! and indexes are represented by a [u32]. Then, (2^8 - 1) * 2^32 = (2^40 -
+//! 2^32) = 1.095 trillion total elements can ever be stored.
 //!
 //! The limits are important to keep in mind, but in practice, with a sufficient
 //! sized index and generation type, the limits will never be encounted.
@@ -102,14 +110,18 @@ use crate::{index::Allocator, unmanaged::UnmanagedGenVec, Error, Incrementable};
 ///
 /// The range of values for `G` determines how many generations a single index
 /// can be used. Assume a [u8] is used and a single index is allocated and
-/// deallocated 256 times. After the 256th allocation, the index will never be
+/// deallocated 255 times. After the 255th allocation, the index will never be
 /// allocated again. For [`GenVec`][crate::vec::GenVec], an index which will
 /// never be re-used is essentially equivalent to wasted memory which will not
 /// be reclaimed.
 ///
+/// Note that for a [u8], the maximum value (255) serves as a tombstone marker
+/// indicating that the index can no longer be used (otherwise a generational
+/// index with generation 255 could always access the value).
+///
 /// Assuming a single index is allocated and deallocated every second, a [u16]
-/// would take 2^16 seconds to exhaust an index which is roughly 18 hours. A
-/// [u32] would take 2^32 seconds which is more than 136 years.
+/// would take (2^16 - 1) seconds to exhaust an index which is roughly 18 hours. A
+/// [u32] would take (2^32 - 1) seconds which is more than 136 years.
 ///
 /// ## `I`
 ///
@@ -354,12 +366,6 @@ where
 
     /// Removes access to an element which matches the generation of the element.
     ///
-    /// # Important
-    ///
-    /// If the generation is the last generation (the maximum generation value),
-    /// then the value will remain accessible for any generational index with
-    /// the same index and last generation.
-    ///
     /// # Errors
     ///
     /// Errors are returned if:
@@ -503,7 +509,7 @@ mod tests {
         let mut gen_vec = GenVec::<Value<u32>, u8>::default();
 
         let mut gen_index = (0, 0);
-        for i in 0..=u8::MAX {
+        for i in 0..u8::MAX {
             gen_index = gen_vec.insert(Value::new(u32::from(i)))?;
             assert_eq!((0, i), gen_index);
             gen_vec.remove(gen_index)?;
@@ -516,7 +522,7 @@ mod tests {
         assert_eq!((1, 0), new_gen_index);
 
         // Attempt to remove old index again
-        assert_eq!((0, 255), gen_index);
+        assert_eq!((0, 254), gen_index);
         gen_vec.remove(gen_index)?;
 
         let new_gen_index = gen_vec.insert(Value::new(257))?;

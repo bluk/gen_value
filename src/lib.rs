@@ -44,6 +44,13 @@ pub mod vec;
 pub trait Incrementable: PartialOrd + Sized {
     /// Returns the next value, if available.
     fn next(&self) -> Option<Self>;
+
+    /// Returns the maximum value, if available.
+    ///
+    /// For generations, the maximum value serves as an indicator that the index
+    /// can no longer be used (tombstone value). The last generation used would
+    /// be `max() - 1`.
+    fn max() -> Option<Self>;
 }
 
 /// Makes an Incremental implementation for an integer type.
@@ -52,6 +59,10 @@ macro_rules! make_incremental_int_impl {
         impl Incrementable for $ty {
             fn next(&self) -> Option<Self> {
                 self.checked_add(1)
+            }
+
+            fn max() -> Option<Self> {
+                Some(Self::MAX)
             }
         }
     };

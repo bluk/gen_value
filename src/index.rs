@@ -40,14 +40,18 @@ use crate::Incrementable;
 ///
 /// The range of values for `G` determines how many generations a single index
 /// can be used. Assume a [u8] is used and a single index is allocated and
-/// deallocated 256 times. After the 256th allocation, the index will never be
+/// deallocated 255 times. After the 255th allocation, the index will never be
 /// allocated again. For [`GenVec`][crate::vec::GenVec], an index which will
 /// never be re-used is essentially equivalent to wasted memory which will not
 /// be reclaimed.
 ///
+/// Note that for a [u8], the maximum value (255) serves as a tombstone marker
+/// indicating that the index can no longer be used (otherwise a generational
+/// index with generation 255 could always access the value).
+///
 /// Assuming a single index is allocated and deallocated every second, a [u16]
-/// would take 2^16 seconds to exhaust an index which is roughly 18 hours. A
-/// [u32] would take 2^32 seconds which is more than 136 years.
+/// would take (2^16 - 1) seconds to exhaust an index which is roughly 18 hours. A
+/// [u32] would take (2^32 - 1) seconds which is more than 136 years.
 ///
 /// ## `I`
 ///
@@ -81,6 +85,11 @@ use crate::Incrementable;
 pub struct Allocator<G = u16, I = usize, GenIndex = (I, G)> {
     next_index: Option<I>,
     avail_gen_indexes: Vec<GenIndex>,
+    // A temporary variable to store the next generation of the last dealloced variable.
+    // Normally, once a GenIndex is dealloced, the next generation of the GenIndex will be added to avail_gen_indexes.
+    // However, if the next generation is the maximum generation (the tombstone generation), then the index should not be added as an available index.
+    // Instead, it will be temporarily added to last_dealloc_next_gen which is temporarily returned from dealloc function. It is never used again.
+    last_dealloc_next_gen: Option<GenIndex>,
     gen_ty: PhantomData<G>,
 }
 
@@ -168,6 +177,7 @@ impl<G, I, GenIndex> Allocator<G, I, GenIndex> {
         Self {
             next_index: Some(index),
             avail_gen_indexes: Vec::default(),
+            last_dealloc_next_gen: None,
             gen_ty: PhantomData,
         }
     }
@@ -181,6 +191,7 @@ where
         Self {
             next_index: Some(I::default()),
             avail_gen_indexes: Vec::default(),
+            last_dealloc_next_gen: None,
             gen_ty: PhantomData,
         }
     }
@@ -258,14 +269,13 @@ where
     /// It allows an index in a collection to be reused (which reduces memory
     /// allocations and copies).
     ///
-    /// A preview of the next generation of the index is returned, if available.
-    /// The generation may not be able to be incremented so `None` could be
-    /// returned.
-    ///
-    /// The return value is a preview of the next generation of the index.
-    /// It could be used to increment the generation at a collection's
-    /// index. By incrementing the generation, the original index can not be
-    /// used to access data from the collection.
+    /// The return value is the next generation of the index, if available. It
+    /// should be used to increment the generation at a collection's index. By
+    /// incrementing the generation, the original index can not be used to
+    /// access data from the collection. The next generation of the index will be
+    /// returned in a future [alloc] unless the generation is the maximum
+    /// generation which serves as a tombstone value to indicate an index can no
+    /// longer be used.
     ///
     /// # Safety
     ///
@@ -351,13 +361,20 @@ where
     {
         let gen_index: (I, G) = gen_index.into();
 
-        if let Some(avail_gen_index) = gen_index
-            .1
-            .next()
-            .map(|new_gen| GenIndex::from((gen_index.0, new_gen)))
-        {
-            self.avail_gen_indexes.push(avail_gen_index);
-            self.avail_gen_indexes.last()
+        if let Some(new_gen) = gen_index.1.next() {
+            // The maximum generation is treated like a tombstone value
+            // indicating the index is "unavailable" for future usage.
+            if Some(&new_gen) == G::max().as_ref() {
+                let avail_gen_index = GenIndex::from((gen_index.0, new_gen));
+                // The last_dealloc_next_gen field is only used because the method cannot return a
+                // borrow of a variable which only exists in the local context.
+                self.last_dealloc_next_gen = Some(avail_gen_index);
+                self.last_dealloc_next_gen.as_ref()
+            } else {
+                let avail_gen_index = GenIndex::from((gen_index.0, new_gen));
+                self.avail_gen_indexes.push(avail_gen_index);
+                self.avail_gen_indexes.last()
+            }
         } else {
             None
         }
