@@ -15,7 +15,7 @@ use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::vec::Vec;
 
-use crate::Error;
+use crate::{Error, Incrementable};
 
 /// `Vec` indexed with externally managed generational indexes.
 ///
@@ -202,7 +202,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Errors are returned if:
     ///
     /// * the index is out of bounds
-    /// * the generation of the generational index is less than the generation associated with the element
+    /// * the generation of the generational index is not equal to the generation associated with the element
     pub fn get(&self, gen_index: GenIndex) -> Result<&T, Error>
     where
         GenIndex: Into<(I, G)>,
@@ -226,7 +226,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Errors are returned if:
     ///
     /// * the index is out of bounds
-    /// * the generation of the generational index is less than the generation associated with the element
+    /// * the generation of the generational index is not equal to the generation associated with the element
     pub fn get_mut(&mut self, gen_index: GenIndex) -> Result<&mut T, Error>
     where
         GenIndex: Into<(I, G)>,
@@ -337,7 +337,13 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Sets or pushes the element at the index if the generation is equal to
     /// the existing generation associated with the element.
     ///
-    /// Returns the previous generation and the value for the element if replacing an existing value.
+    /// Returns the previous generation and the value for the element if
+    /// replacing an existing value.
+    ///
+    /// This method is a convenience method for the newest allocated
+    /// generational index. Either the newest allocated generationl index is
+    /// for an existing index or it is for the immediate next index if a
+    /// value were to be pushed to the `Vec`.
     ///
     /// # Errors
     ///
@@ -372,7 +378,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
         }
     }
 
-    /// Sets the generation for an index if the generation is greater than
+    /// Sets the generation for an index if the generation is one greater than
     /// the existing generation associated with the element.
     ///
     /// Returns the previous generation if successful.
@@ -384,10 +390,15 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// * the index is out of bounds
     /// * the generation is less than or equal to the existing generation associated with
     /// the element
+    ///
+    /// # Panics
+    ///
+    /// Panics if the generation is not the next generation after the existing
+    /// generation associated with the element.
     pub fn set_gen(&mut self, gen_index: GenIndex) -> Result<G, Error>
     where
         GenIndex: Into<(I, G)>,
-        G: PartialOrd,
+        G: PartialOrd + Incrementable,
         I: Into<usize>,
     {
         let (index, generation) = gen_index.into();
@@ -396,6 +407,10 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
             .get_mut(index.into())
             .ok_or_else(Error::index_out_of_bounds)?;
         if elem.0 < generation {
+            assert!(
+                elem.0.next().as_ref() == Some(&generation),
+                "generation is not the next generation of the current element"
+            );
             let prev_value = core::mem::replace(&mut elem.0, generation);
             Ok(prev_value)
         } else if elem.0 == generation {
@@ -460,6 +475,206 @@ mod tests {
     }
 
     #[test]
+    fn test_contains_index_out_of_bounds() {
+        let gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        assert!(!gen_vec.contains_index((0, 0)));
+    }
+
+    #[test]
+    fn test_contains_index_generation_less_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+        assert!(!gen_vec.contains_index((0, 0)));
+    }
+
+    #[test]
+    fn test_contains_index_generation_greater_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+        assert!(!gen_vec.contains_index((2, 0)));
+    }
+
+    #[test]
+    fn test_get_index_out_of_bounds() {
+        let gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.get((0, 0)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_get_generation_less_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+
+        let err = gen_vec.get((0, 0)).unwrap_err();
+        assert!(err.is_not_equal_generation_error());
+    }
+
+    #[test]
+    fn test_get_generation_greater_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+
+        let err = gen_vec.get((0, 2)).unwrap_err();
+        assert!(err.is_not_equal_generation_error());
+    }
+
+    #[test]
+    fn test_get_mut_index_out_of_bounds() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.get_mut((0, 0)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_get_mut_generation_less_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+
+        let err = gen_vec.get_mut((0, 0)).unwrap_err();
+        assert!(err.is_not_equal_generation_error());
+    }
+
+    #[test]
+    fn test_get_mut_generation_greater_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+
+        let err = gen_vec.get_mut((0, 2)).unwrap_err();
+        assert!(err.is_not_equal_generation_error());
+    }
+
+    #[test]
+    fn test_get_gen_index_out_of_bounds() {
+        let gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+
+        assert_eq!(gen_vec.get_gen(0), None);
+    }
+
+    #[test]
+    fn test_set_index_out_of_bounds() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.set((0, 0), Value(1)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_set_generation_less_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+        let err = gen_vec.set((0, 0), Value(1)).unwrap_err();
+        assert!(err.is_generation_less_than_existing());
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is greater than generation associated with element")]
+    fn test_set_generation_greater_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(0, Value(0));
+        gen_vec.set((0, 1), Value(1)).unwrap();
+    }
+
+    #[test]
+    fn test_set_or_push_index_out_of_bounds() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.set_or_push((1, 0), Value(1)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_set_or_push_generation_less_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+        let err = gen_vec.set((0, 0), Value(1)).unwrap_err();
+        assert!(err.is_generation_less_than_existing());
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is greater than generation associated with element")]
+    fn test_set_or_push_generation_greater_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(0, Value(0));
+        gen_vec.set((0, 1), Value(1)).unwrap();
+    }
+
+    #[test]
+    fn test_set_gen_index_out_of_bounds() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.set_gen((0, 1)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_set_gen_generation_already_equal() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+        let err = gen_vec.set_gen((0, 1)).unwrap_err();
+        assert!(err.is_already_equal_generation_error());
+    }
+
+    #[test]
+    fn test_set_gen_generation_less_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(2, Value(0));
+        let err = gen_vec.set_gen((0, 1)).unwrap_err();
+        assert!(err.is_generation_less_than_existing());
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not the next generation of the current element")]
+    fn test_set_gen_generation_greater_than_more_than_one_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+        let _ = gen_vec.set_gen((0, 3));
+    }
+
+    #[test]
+    #[should_panic(expected = "index out of bounds")]
+    fn test_index_out_of_bounds_index() {
+        let gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        let _ = gen_vec[(0, 0)];
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not equal")]
+    fn test_index_generation_less_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+        let _ = &gen_vec[(0, 0)];
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not equal")]
+    fn test_index_generation_greater_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(0, Value(0));
+        let _ = &gen_vec[(0, 1)];
+    }
+
+    #[test]
+    #[should_panic(expected = "index out of bounds")]
+    fn test_index_mut_out_of_bounds_index() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        let _ = &mut gen_vec[(0, 0)];
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not equal")]
+    fn test_index_mut_generation_less_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(1, Value(0));
+        let _ = &mut gen_vec[(0, 0)];
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not equal")]
+    fn test_index_mut_generation_greater_than_existing() {
+        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
+        gen_vec.push(0, Value(0));
+        let _ = &mut gen_vec[(0, 1)];
+    }
+
+    #[test]
     fn test_index_mut() {
         let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
 
@@ -472,65 +687,5 @@ mod tests {
         let value = &mut gen_vec[(index, generation)];
         value.set(9);
         assert_eq!(gen_vec[(index, generation)], Value(9));
-    }
-
-    #[test]
-    #[should_panic(expected = "generation is greater than generation associated with element")]
-    fn test_set_with_generation_greater_than_existing() {
-        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        gen_vec.push(0, Value(0u32));
-        gen_vec.set((0, 1), Value(1)).unwrap();
-    }
-
-    #[test]
-    fn test_set_with_index_out_of_bounds() {
-        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        let err = gen_vec.set((0, 0), Value(1)).unwrap_err();
-        assert!(err.is_index_out_of_bounds());
-    }
-
-    #[test]
-    #[should_panic(expected = "generation is greater than generation associated with element")]
-    fn test_set_or_push_with_generation_greater_than_existing() {
-        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        gen_vec.push(0, Value(0u32));
-        gen_vec.set((0, 1), Value(1)).unwrap();
-    }
-
-    #[test]
-    fn test_set_or_push_with_index_out_of_bounds() {
-        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        let err = gen_vec.set_or_push((1, 0), Value(1)).unwrap_err();
-        assert!(err.is_index_out_of_bounds());
-    }
-
-    #[test]
-    #[should_panic(expected = "generation is not equal")]
-    fn test_index_access_with_wrong_generation() {
-        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        gen_vec.push(0, Value(0));
-        let _ = &gen_vec[(0, 1)];
-    }
-
-    #[test]
-    #[should_panic(expected = "generation is not equal")]
-    fn test_index_mut_access_with_wrong_generation() {
-        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        gen_vec.push(0, Value(0));
-        let _ = &mut gen_vec[(0, 1)];
-    }
-
-    #[test]
-    #[should_panic(expected = "index out of bounds")]
-    fn test_index_access_with_out_of_bounds_index() {
-        let gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        let _ = gen_vec[(0, 0)];
-    }
-
-    #[test]
-    #[should_panic(expected = "index out of bounds")]
-    fn test_index_mut_access_with_out_of_bounds_index() {
-        let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        let _ = &mut gen_vec[(0, 0)];
     }
 }
