@@ -18,8 +18,7 @@
 //! element is checked to determine if the operation should proceed.
 //!
 //! To get an element, the generations must be equal. To set an element, the
-//! generation must be equal to or greater than the existing generation. The
-//! element is set with the latest generation.
+//! generation must be equal to the existing generation.
 //!
 //! When removing an element, the generation must be equal to or greater than
 //! the existing generation. The generation associated with the element is
@@ -267,7 +266,7 @@ where
         let (index, generation) = gen_index.into();
         self.inner
             .set_or_push(GenIndex::from((index.clone(), generation.clone())), value)
-            .expect("set of push should have succeeded");
+            .expect("set or push should have succeeded");
         Ok(GenIndex::from((index, generation)))
     }
 
@@ -345,8 +344,8 @@ where
         self.inner.get_unchecked_mut(gen_index)
     }
 
-    /// Sets a value at the given index if the generation is greater than or
-    /// equal to the generation associated with the existing element.
+    /// Sets a value at the given index if the generation is equal to the
+    /// generation associated with the existing element.
     ///
     /// Returns the previous generation and the value for the element if successful.
     ///
@@ -404,6 +403,17 @@ where
 
     fn index(&self, gen_index: GenIndex) -> &Self::Output {
         &self.inner[gen_index]
+    }
+}
+
+impl<T, G, I, GenIndex> core::ops::IndexMut<GenIndex> for GenVec<T, G, I, GenIndex>
+where
+    I: Into<usize>,
+    GenIndex: Into<(I, G)>,
+    G: PartialEq,
+{
+    fn index_mut(&mut self, gen_index: GenIndex) -> &mut Self::Output {
+        &mut self.inner[gen_index]
     }
 }
 
