@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.4.0] - 2022-04-15
+
+### Updated
+
+- Only allow set if the generations are equal
+
+  The generation in the Vec should always be the greatest generation
+  used. A generational index with a greater generation is
+  invalid. While it could be allowed, skipping generations should
+  be considered a logic bug because it wastes generations.
+
+  IndexMut implementations are added for `GenVec` and `UnmanagedGenVec`.
+
+- Fix inconsistent error/panic in set vs set_or_push
+
+  If the index is out of bounds when calling set_or_push,
+  an error is returned instead of panicing.
+
+- Fix default GenIndex type for UnmanagedGenVec
+
+  Type parameter specified (usize, u16) but should have been (I, G)
+  in case G or I is specified and they do not match the defaults.
+
 ## [0.3.0] - 2022-04-15
 
 ### Updated
@@ -24,7 +47,8 @@
 
 - Initial release
 
-[Unreleased]: https://github.com/bluk/gen_value/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/bluk/gen_value/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/bluk/gen_value/releases/tag/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/bluk/gen_value/releases/tag/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/bluk/gen_value/releases/tag/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/bluk/gen_value/releases/tag/v0.1.0
