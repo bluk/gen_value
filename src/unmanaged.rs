@@ -8,7 +8,7 @@
 
 //! `Vec` indexed with externally managed generational indexes.
 
-use core::marker::PhantomData;
+use core::{cmp::Ordering, marker::PhantomData};
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::vec::Vec;
@@ -347,13 +347,15 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     {
         let (index, generation) = gen_index.into();
         let index = index.into();
-        assert!(index <= self.inner.len());
-        if index < self.len() {
-            self.internal_set(index, generation, value).map(Some)
-        } else {
-            debug_assert_eq!(index, self.len());
-            self.push(generation, value);
-            Ok(None)
+
+        match index.cmp(&self.len()) {
+            Ordering::Less => self.internal_set(index, generation, value).map(Some),
+            Ordering::Equal => {
+                debug_assert_eq!(index, self.len());
+                self.push(generation, value);
+                Ok(None)
+            }
+            Ordering::Greater => Err(Error::index_out_of_bounds()),
         }
     }
 
