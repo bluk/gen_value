@@ -95,7 +95,7 @@ use crate::Error;
 /// * `Into<(I, G)> for GenIndex`
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(clippy::module_name_repetitions)]
-pub struct UnmanagedGenVec<T, G = u16, I = usize, GenIndex = (usize, u16)> {
+pub struct UnmanagedGenVec<T, G = u16, I = usize, GenIndex = (I, G)> {
     inner: Vec<(G, T)>,
     index_ty: PhantomData<I>,
     gen_index_ty: PhantomData<GenIndex>,
