@@ -272,10 +272,10 @@ where
     /// The return value is the next generation of the index, if available. It
     /// should be used to increment the generation at a collection's index. By
     /// incrementing the generation, the original index can not be used to
-    /// access data from the collection. The next generation of the index will be
-    /// returned in a future [alloc] unless the generation is the maximum
-    /// generation which serves as a tombstone value to indicate an index can no
-    /// longer be used.
+    /// access data from the collection. The next generation of the index will
+    /// be returned in a future [`alloc`][Allocator::alloc] unless the
+    /// generation is the maximum generation which serves as a tombstone value
+    /// to indicate an index can no longer be used.
     ///
     /// # Safety
     ///
@@ -383,6 +383,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use core::cmp::Ordering;
+
     use super::*;
 
     #[test]
@@ -457,5 +459,69 @@ mod tests {
             assert_eq!(gen_idx_0_again.index, 0);
             assert_eq!(gen_idx_0_again.gen, 1);
         }
+    }
+
+    #[test]
+    fn test_alloc_use_all_generations() {
+        let mut gen_idx_alloc = Allocator::<u8>::default();
+
+        let mut gen_index = (0, 0);
+        for n in 0..(u8::MAX) {
+            gen_index = gen_idx_alloc.alloc().unwrap();
+            assert_eq!((0, n), gen_index);
+            let next_gen_index = gen_idx_alloc.dealloc(gen_index).unwrap();
+            assert_eq!(&(0, n + 1), next_gen_index);
+        }
+
+        assert_eq!((0, 254), gen_index);
+
+        let gen_index = gen_idx_alloc.alloc().unwrap();
+        assert_eq!((1, 0), gen_index);
+    }
+
+    #[test]
+    fn test_safety_multiple_deallocs() {
+        let mut gen_idx_alloc = Allocator::<u8>::default();
+
+        let orig_gen_index = gen_idx_alloc.alloc().unwrap();
+        assert_eq!((0, 0), orig_gen_index);
+
+        gen_idx_alloc.dealloc(orig_gen_index).unwrap();
+        // MUST not dealloc same index multiple times
+        gen_idx_alloc.dealloc(orig_gen_index).unwrap();
+
+        let gen_index = gen_idx_alloc.alloc().unwrap();
+        assert_eq!((0, 1), gen_index);
+
+        // Otherwise the same generational index may be allocated twice
+        let gen_index = gen_idx_alloc.alloc().unwrap();
+        assert_eq!((0, 1), gen_index);
+    }
+
+    #[test]
+    fn test_safety_multiple_deallocs_after_allocing() {
+        let mut gen_idx_alloc = Allocator::<u8>::default();
+
+        let orig_gen_index = gen_idx_alloc.alloc().unwrap();
+        assert_eq!((0, 0), orig_gen_index);
+
+        gen_idx_alloc.dealloc(orig_gen_index).unwrap();
+
+        let gen_index = gen_idx_alloc.alloc().unwrap();
+        assert_eq!((0, 1), gen_index);
+
+        // MUST not dealloc same index multiple times
+        gen_idx_alloc.dealloc(orig_gen_index).unwrap();
+
+        // Otherwise the same generational index may be allocated twice
+        let gen_index = gen_idx_alloc.alloc().unwrap();
+        assert_eq!((0, 1), gen_index);
+    }
+
+    #[test]
+    fn test_ordering_of_tuple() {
+        assert_eq!((0usize, 0u8).cmp(&(1usize, 0u8)), Ordering::Less);
+        assert_eq!((0usize, 0u8).cmp(&(0usize, 1u8)), Ordering::Less);
+        assert_eq!((0usize, 1u8).cmp(&(1usize, 0u8)), Ordering::Less);
     }
 }
