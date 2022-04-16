@@ -289,7 +289,7 @@ where
     /// Errors are returned if:
     ///
     /// * the index is out of bounds
-    /// * the generation of the generational index is less than the generation associated with the element
+    /// * the generation of the generational index is not equal to the generation associated with the element
     pub fn get(&self, gen_index: GenIndex) -> Result<&T, Error>
     where
         GenIndex: Into<(I, G)>,
@@ -307,7 +307,7 @@ where
     /// Errors are returned if:
     ///
     /// * the index is out of bounds
-    /// * the generation of the generational index is less than the generation associated with the element
+    /// * the generation of the generational index is not equal to the generation associated with the element
     pub fn get_mut(&mut self, gen_index: GenIndex) -> Result<&mut T, Error>
     where
         GenIndex: Into<(I, G)>,
@@ -355,6 +355,11 @@ where
     ///
     /// * the index is out of bounds
     /// * the generation of the generational index is less than the generation associated with the element
+    ///
+    /// # Panics
+    ///
+    /// * if the generation is greater than the current generation associated
+    /// with the element.
     pub fn set(&mut self, gen_index: GenIndex, value: T) -> Result<(G, T), Error>
     where
         GenIndex: Into<(I, G)>,
@@ -370,6 +375,12 @@ where
     /// Errors are returned if:
     ///
     /// * the index is out of bounds
+    /// * the generation is less than or equal to the existing generation
+    ///
+    /// # Panics
+    ///
+    /// * if the generation is greater than the current generation associated
+    /// with the element.
     pub fn remove(&mut self, gen_index: GenIndex) -> Result<(), Error>
     where
         GenIndex: From<(I, G)> + Into<(I, G)>,
@@ -378,16 +389,10 @@ where
     {
         let (index, generation) = gen_index.into();
         if let Some(next_gen) = generation.next() {
-            match self
+            let _prev_gen = self
                 .inner
-                .set_gen(GenIndex::from((index.clone(), next_gen)))
-            {
-                Ok(_prev_gen) => {
-                    self.allocator.dealloc(GenIndex::from((index, generation)));
-                }
-                Err(error) if error.is_already_equal_generation_error() => {}
-                Err(error) => return Err(error),
-            }
+                .set_gen(GenIndex::from((index.clone(), next_gen)))?;
+            self.allocator.dealloc(GenIndex::from((index, generation)));
         }
         Ok(())
     }
@@ -422,18 +427,236 @@ mod tests {
     use super::*;
 
     #[derive(Debug, PartialEq)]
-    struct Value<T> {
-        inner: T,
-    }
+    struct Value<T>(T);
 
     impl<T> Value<T> {
-        fn new(inner: T) -> Self {
-            Self { inner }
-        }
-
         fn set(&mut self, value: T) {
-            self.inner = value;
+            self.0 = value;
         }
+    }
+
+    #[test]
+    fn test_contains_index_out_of_bounds() {
+        let gen_vec = GenVec::<Value<u32>, u8>::default();
+        assert!(!gen_vec.contains_index((0, 0)));
+    }
+
+    #[test]
+    fn test_contains_index_generation_less_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let _ = gen_vec.insert(Value(0)).unwrap();
+        assert!(!gen_vec.contains_index((0, 1)));
+    }
+
+    #[test]
+    fn test_contains_index_generation_greater_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let _ = gen_vec.insert(Value(0)).unwrap();
+        assert!(!gen_vec.contains_index((2, 0)));
+    }
+
+    #[test]
+    fn test_insert_generational_index_unavailable_by_index() {
+        let mut gen_vec = GenVec::<Value<u32>, u8, u8>::default();
+        for n in 0..=u8::MAX {
+            let _ = gen_vec.insert(Value(u32::from(n))).unwrap();
+        }
+        let err = gen_vec.insert(Value(0)).unwrap_err();
+        assert!(err.is_generational_index_allocation_error());
+    }
+
+    #[test]
+    fn test_insert_generational_index_unavailable_by_generation() {
+        let mut gen_vec = GenVec::<Value<(u8, u8)>, u8, u8>::default();
+        for idx in 0..=u8::MAX {
+            for gen in 0..u8::MAX {
+                let gen_index = gen_vec.insert(Value((idx, gen))).unwrap();
+                gen_vec.remove(gen_index).unwrap();
+            }
+        }
+        let err = gen_vec.insert(Value((0, 0))).unwrap_err();
+        assert!(err.is_generational_index_allocation_error());
+    }
+
+    #[test]
+    fn test_get_index_out_of_bounds() {
+        let gen_vec = GenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.get((0, 0)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_get_generation_less_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove(gen_index).unwrap();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!(gen_index, (0, 1));
+
+        let err = gen_vec.get((0, 0)).unwrap_err();
+        assert!(err.is_not_equal_generation_error());
+    }
+
+    #[test]
+    fn test_get_generation_greater_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let _ = gen_vec.insert(Value(0)).unwrap();
+
+        let err = gen_vec.get((0, 1)).unwrap_err();
+        assert!(err.is_not_equal_generation_error());
+    }
+
+    #[test]
+    fn test_get_mut_index_out_of_bounds() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.get_mut((0, 0)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_get_mut_generation_less_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove(gen_index).unwrap();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!(gen_index, (0, 1));
+
+        let err = gen_vec.get_mut((0, 0)).unwrap_err();
+        assert!(err.is_not_equal_generation_error());
+    }
+
+    #[test]
+    fn test_get_mut_generation_greater_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let _ = gen_vec.insert(Value(0)).unwrap();
+
+        let err = gen_vec.get_mut((0, 1)).unwrap_err();
+        assert!(err.is_not_equal_generation_error());
+    }
+
+    #[test]
+    fn test_set_index_out_of_bounds() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.set((0, 0), Value(1)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_set_generation_less_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove(gen_index).unwrap();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!((0, 1), gen_index);
+        let err = gen_vec.set((0, 0), Value(1)).unwrap_err();
+        assert!(err.is_generation_less_than_existing());
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is greater than generation associated with element")]
+    fn test_set_generation_greater_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let _ = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.set((0, 1), Value(1)).unwrap();
+    }
+
+    #[test]
+    fn test_remove_index_out_of_bounds() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let err = gen_vec.remove((0, 0)).unwrap_err();
+        assert!(err.is_index_out_of_bounds());
+    }
+
+    #[test]
+    fn test_remove_generation_one_less_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove(gen_index).unwrap();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!((0, 1), gen_index);
+        let err = gen_vec.remove((0, 0)).unwrap_err();
+        assert!(err.is_already_equal_generation_error());
+    }
+
+    #[test]
+    fn test_remove_generation_more_than_one_less_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove(gen_index).unwrap();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove(gen_index).unwrap();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!((0, 2), gen_index);
+        gen_vec.remove(gen_index).unwrap();
+
+        let err = gen_vec.remove((0, 0)).unwrap_err();
+        assert!(err.is_generation_less_than_existing());
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not the next generation of the current element")]
+    fn test_remove_generation_greater_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let _ = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove((0, 1)).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "index out of bounds")]
+    fn test_index_out_of_bounds_index() {
+        let gen_vec = GenVec::<Value<u32>, u8>::default();
+        let _ = gen_vec[(0, 0)];
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not equal")]
+    fn test_index_generation_less_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove(gen_index).unwrap();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!(gen_index, (0, 1));
+
+        let _ = &gen_vec[(0, 0)];
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not equal")]
+    fn test_index_generation_greater_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!(gen_index, (0, 0));
+
+        let _ = &gen_vec[(0, 1)];
+    }
+
+    #[test]
+    #[should_panic(expected = "index out of bounds")]
+    fn test_index_mut_out_of_bounds_index() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let _ = &mut gen_vec[(0, 0)];
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not equal")]
+    fn test_index_mut_generation_less_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        gen_vec.remove(gen_index).unwrap();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!(gen_index, (0, 1));
+
+        let _ = &mut gen_vec[(0, 0)];
+    }
+
+    #[test]
+    #[should_panic(expected = "generation is not equal")]
+    fn test_index_mut_generation_greater_than_existing() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        let gen_index = gen_vec.insert(Value(0)).unwrap();
+        assert_eq!(gen_index, (0, 0));
+
+        let _ = &mut gen_vec[(0, 1)];
     }
 
     #[test]
@@ -444,8 +667,8 @@ mod tests {
         assert!(gen_vec.is_empty());
 
         // Insert first entity
-        let first_entity_index = gen_vec.insert(Value::new(42))?;
-        assert_eq!(*gen_vec.get(first_entity_index)?, Value::new(42));
+        let first_entity_index = gen_vec.insert(Value(42))?;
+        assert_eq!(*gen_vec.get(first_entity_index)?, Value(42));
         assert!(gen_vec.contains_index(first_entity_index));
         assert_eq!(gen_vec.len(), 1);
         assert!(!gen_vec.is_empty());
@@ -453,24 +676,21 @@ mod tests {
         // Change first entity's value
         let first_entity_value = gen_vec.get_mut(first_entity_index)?;
         first_entity_value.set(1001);
-        assert_eq!(*gen_vec.get(first_entity_index)?, Value::new(1001));
+        assert_eq!(*gen_vec.get(first_entity_index)?, Value(1001));
         // Turn Result into Option with ok()
-        assert_eq!(
-            gen_vec.get(first_entity_index).ok(),
-            Some(&Value::new(1001))
-        );
+        assert_eq!(gen_vec.get(first_entity_index).ok(), Some(&Value(1001)));
         assert_eq!(gen_vec.len(), 1);
 
         // Set first entity's value
-        let set_first_entity_result = gen_vec.set(first_entity_index, Value::new(1002))?;
-        assert_eq!(set_first_entity_result, (0, Value::new(1001)));
-        assert_eq!(*gen_vec.get(first_entity_index)?, Value::new(1002));
+        let set_first_entity_result = gen_vec.set(first_entity_index, Value(1002))?;
+        assert_eq!(set_first_entity_result, (0, Value(1001)));
+        assert_eq!(*gen_vec.get(first_entity_index)?, Value(1002));
         assert_eq!(gen_vec.len(), 1);
 
         // Insert other entity value
-        let other_entity_index = gen_vec.insert(Value::new(9))?;
-        assert_eq!(*gen_vec.get(first_entity_index)?, Value::new(1002));
-        assert_eq!(*gen_vec.get(other_entity_index)?, Value::new(9));
+        let other_entity_index = gen_vec.insert(Value(9))?;
+        assert_eq!(*gen_vec.get(first_entity_index)?, Value(1002));
+        assert_eq!(*gen_vec.get(other_entity_index)?, Value(9));
         assert_eq!(gen_vec.len(), 2);
 
         // Remove first entity's value
@@ -488,7 +708,7 @@ mod tests {
 
         // Cannot set first entity's value
         {
-            let set_first_entity_result = gen_vec.set(first_entity_index, Value::new(1002));
+            let set_first_entity_result = gen_vec.set(first_entity_index, Value(1002));
             assert!(set_first_entity_result.is_err());
             assert!(set_first_entity_result
                 .unwrap_err()
@@ -496,13 +716,13 @@ mod tests {
         }
 
         // Other entity can still be retrieved with same index and length is still 2
-        assert_eq!(*gen_vec.get(other_entity_index)?, Value::new(9));
+        assert_eq!(*gen_vec.get(other_entity_index)?, Value(9));
         assert_eq!(gen_vec.len(), 2);
 
         // Insert last entity
-        let last_entity_index = gen_vec.insert(Value::new(3))?;
-        assert_eq!(*gen_vec.get(other_entity_index)?, Value::new(9));
-        assert_eq!(*gen_vec.get(last_entity_index)?, Value::new(3));
+        let last_entity_index = gen_vec.insert(Value(3))?;
+        assert_eq!(*gen_vec.get(other_entity_index)?, Value(9));
+        assert_eq!(*gen_vec.get(last_entity_index)?, Value(3));
         assert_eq!(gen_vec.len(), 2);
 
         assert!(gen_vec.get(first_entity_index).is_err());
@@ -520,7 +740,7 @@ mod tests {
 
         let mut gen_index = (0, 0);
         for i in 0..u8::MAX {
-            gen_index = gen_vec.insert(Value::new(u32::from(i)))?;
+            gen_index = gen_vec.insert(Value(u32::from(i)))?;
             assert_eq!((0, i), gen_index);
             gen_vec.remove(gen_index)?;
         }
@@ -528,14 +748,15 @@ mod tests {
         assert_eq!(gen_vec.len(), 1);
         assert!(!gen_vec.is_empty());
 
-        let new_gen_index = gen_vec.insert(Value::new(256))?;
+        let new_gen_index = gen_vec.insert(Value(256))?;
         assert_eq!((1, 0), new_gen_index);
 
         // Attempt to remove old index again
         assert_eq!((0, 254), gen_index);
-        gen_vec.remove(gen_index)?;
+        let err = gen_vec.remove(gen_index).unwrap_err();
+        assert!(err.is_already_equal_generation_error());
 
-        let new_gen_index = gen_vec.insert(Value::new(257))?;
+        let new_gen_index = gen_vec.insert(Value(257))?;
         assert_eq!((2, 0), new_gen_index);
 
         Ok::<_, Error>(())
@@ -545,21 +766,23 @@ mod tests {
     fn test_remove_old_index_repeatedly() -> Result<(), Error> {
         let mut gen_vec = GenVec::<Value<u32>, u8>::default();
 
-        let gen_index = gen_vec.insert(Value::new(0))?;
+        let gen_index = gen_vec.insert(Value(0))?;
         assert_eq!(gen_index, (0, 0));
         gen_vec.remove(gen_index)?;
 
         // Remove old generation index again
-        gen_vec.remove(gen_index)?;
+        let err = gen_vec.remove(gen_index).unwrap_err();
+        assert!(err.is_already_equal_generation_error());
 
-        let newer_gen_index = gen_vec.insert(Value::new(1))?;
+        let newer_gen_index = gen_vec.insert(Value(1))?;
         assert_eq!(newer_gen_index, (0, 1));
         assert_eq!(gen_vec.len(), 1);
 
         // Remove old generation index again
-        gen_vec.remove(gen_index)?;
+        let err = gen_vec.remove(gen_index).unwrap_err();
+        assert!(err.is_already_equal_generation_error());
 
-        let newer_gen_index = gen_vec.insert(Value::new(2))?;
+        let newer_gen_index = gen_vec.insert(Value(2))?;
         assert_eq!(newer_gen_index, (1, 0));
         assert_eq!(gen_vec.len(), 2);
 
