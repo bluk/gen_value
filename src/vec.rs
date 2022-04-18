@@ -394,6 +394,7 @@ where
     ///
     /// * if the generation is greater than the current generation associated
     /// with the element.
+    /// * if the generation could not be incremented
     pub fn remove(&mut self, gen_index: GenIndex) -> Result<(), Error>
     where
         GenIndex: From<(I, G)> + Into<(I, G)>,
@@ -406,6 +407,8 @@ where
                 .inner
                 .set_gen(GenIndex::from((index.clone(), next_gen)))?;
             self.allocator.dealloc(GenIndex::from((index, generation)));
+        } else {
+            panic!("generation could not be incremented");
         }
         Ok(())
     }
@@ -612,6 +615,19 @@ mod tests {
         let mut gen_vec = GenVec::<Value<u32>, u8>::default();
         let _ = gen_vec.insert(Value(0)).unwrap();
         gen_vec.remove((0, 1)).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "generation could not be incremented")]
+    fn test_remove_generation_no_next_generation() {
+        let mut gen_vec = GenVec::<Value<u32>, u8>::default();
+        for _ in 0..u8::MAX {
+            let gen_index = gen_vec.insert(Value(0)).unwrap();
+            gen_vec.remove(gen_index).unwrap();
+        }
+
+        // generation with 255 should never be returned, but if manually constructed, the remove will panic
+        gen_vec.remove((0, 255)).unwrap();
     }
 
     #[test]
