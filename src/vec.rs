@@ -405,7 +405,7 @@ where
         if let Some(next_gen) = generation.next() {
             let _prev_gen = self
                 .inner
-                .set_gen(GenIndex::from((index.clone(), next_gen)))?;
+                .set_next_gen(GenIndex::from((index.clone(), next_gen)))?;
             self.allocator.dealloc(GenIndex::from((index, generation)));
         } else {
             panic!("generation could not be incremented");

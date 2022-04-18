@@ -36,7 +36,7 @@ use crate::{Error, Incrementable};
 /// If the generation has a maximum value (e.g. `u8::MAX`), then the maximum value
 /// should serve as a tombstone to indicate that the index cannot be used.
 /// Any generational index with the maximum generation should never
-/// be used for any method except [`set_gen`][UnmanagedGenVec::set_gen].
+/// be used for any method except [`set_next_gen`][UnmanagedGenVec::set_next_gen].
 ///
 /// # Type Parameters
 ///
@@ -345,7 +345,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// * if the generation is greater than the current generation associated
     /// with the element. To increase the generation, a call to
-    /// [`set_gen`][UnmanagedGenVec::set_gen] must be called first.
+    /// [`set_next_gen`][UnmanagedGenVec::set_next_gen] must be called first.
     #[inline]
     pub fn set(&mut self, gen_index: GenIndex, value: T) -> Result<(G, T), Error>
     where
@@ -380,7 +380,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// * if the index is greater than the length of the inner vector
     /// * if the generation is greater than the current generation associated
     /// with the element. To increase the generation, a call to
-    /// [`set_gen`][UnmanagedGenVec::set_gen] must be called first.
+    /// [`set_next_gen`][UnmanagedGenVec::set_next_gen] must be called first.
     pub fn set_or_push(&mut self, gen_index: GenIndex, value: T) -> Result<Option<(G, T)>, Error>
     where
         GenIndex: Into<(I, G)>,
@@ -401,8 +401,9 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
         }
     }
 
-    /// Sets the generation for an index if the generation is one greater than
-    /// the existing generation associated with the element.
+    /// Sets the next generation for an index. The `gen_index` parameter is
+    /// composed of the index and the next generation of the current generation
+    /// associated with the element.
     ///
     /// Returns the previous generation if successful.
     ///
@@ -418,7 +419,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// Panics if the generation is not the next generation after the existing
     /// generation associated with the element.
-    pub fn set_gen(&mut self, gen_index: GenIndex) -> Result<G, Error>
+    pub fn set_next_gen(&mut self, gen_index: GenIndex) -> Result<G, Error>
     where
         GenIndex: Into<(I, G)>,
         G: PartialOrd + Incrementable,
@@ -621,34 +622,34 @@ mod tests {
     }
 
     #[test]
-    fn test_set_gen_index_out_of_bounds() {
+    fn test_set_next_gen_index_out_of_bounds() {
         let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
-        let err = gen_vec.set_gen((0, 1)).unwrap_err();
+        let err = gen_vec.set_next_gen((0, 1)).unwrap_err();
         assert!(err.is_index_out_of_bounds());
     }
 
     #[test]
-    fn test_set_gen_generation_already_equal() {
+    fn test_set_next_gen_generation_already_equal() {
         let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
         gen_vec.push_with_gen(1, Value(0));
-        let err = gen_vec.set_gen((0, 1)).unwrap_err();
+        let err = gen_vec.set_next_gen((0, 1)).unwrap_err();
         assert!(err.is_already_equal_generation_error());
     }
 
     #[test]
-    fn test_set_gen_generation_less_than_existing() {
+    fn test_set_next_gen_generation_less_than_existing() {
         let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
         gen_vec.push_with_gen(2, Value(0));
-        let err = gen_vec.set_gen((0, 1)).unwrap_err();
+        let err = gen_vec.set_next_gen((0, 1)).unwrap_err();
         assert!(err.is_generation_less_than_existing());
     }
 
     #[test]
     #[should_panic(expected = "generation is not the next generation of the current element")]
-    fn test_set_gen_generation_greater_than_more_than_one_existing() {
+    fn test_set_next_gen_generation_greater_than_more_than_one_existing() {
         let mut gen_vec = UnmanagedGenVec::<Value<u32>, u8>::default();
         gen_vec.push_with_gen(1, Value(0));
-        let _ = gen_vec.set_gen((0, 3));
+        let _ = gen_vec.set_next_gen((0, 3));
     }
 
     #[test]
