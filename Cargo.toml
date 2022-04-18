@@ -1,6 +1,6 @@
 [package]
 name = "gen_value"
-version = "0.4.0"
+version = "0.5.0"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 authors = ["Bryant Luk <code@bryantluk.com>"]
@@ -12,6 +12,7 @@ documentation = "https://docs.rs/gen_value/"
 readme = "README.md"
 include = [
   "src/**/*.rs",
+  "benches/**/*.rs",
   "Cargo.toml",
   "README.md",
   "LICENSE-APACHE",
