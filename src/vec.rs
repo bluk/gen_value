@@ -161,6 +161,7 @@ impl<T, G, I, GenIndex> GenVec<T, G, I, GenIndex> {
     ///
     /// See [`Vec::new`] for additional information.
     #[must_use]
+    #[inline]
     pub fn new() -> Self
     where
         I: Default,
@@ -175,6 +176,7 @@ impl<T, G, I, GenIndex> GenVec<T, G, I, GenIndex> {
     ///
     /// See [`Vec::with_capacity`] for additional information.
     #[must_use]
+    #[inline]
     pub fn with_capacity(capacity: usize) -> Self
     where
         I: Default,
@@ -189,6 +191,7 @@ impl<T, G, I, GenIndex> GenVec<T, G, I, GenIndex> {
     ///
     /// See [`Vec::len`] for additional information.
     #[must_use]
+    #[inline]
     pub fn len(&self) -> usize {
         self.inner.len()
     }
@@ -197,6 +200,7 @@ impl<T, G, I, GenIndex> GenVec<T, G, I, GenIndex> {
     ///
     /// See [`Vec::is_empty`] for additional information.
     #[must_use]
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -205,6 +209,7 @@ impl<T, G, I, GenIndex> GenVec<T, G, I, GenIndex> {
     ///
     /// See [`Vec::capacity`] for additional information.
     #[must_use]
+    #[inline]
     pub fn capacity(&self) -> usize {
         self.inner.capacity()
     }
@@ -212,6 +217,7 @@ impl<T, G, I, GenIndex> GenVec<T, G, I, GenIndex> {
     /// Reserves additional capacity of the inner [`Vec`].
     ///
     /// See [`Vec::reserve`] for additional information.
+    #[inline]
     pub fn reserve(&mut self, additional: usize) {
         self.inner.reserve(additional);
     }
@@ -219,6 +225,7 @@ impl<T, G, I, GenIndex> GenVec<T, G, I, GenIndex> {
     /// Reserves additional capacity of the inner [`Vec`].
     ///
     /// See [`Vec::reserve_exact`] for additional information.
+    #[inline]
     pub fn reserve_exact(&mut self, additional: usize) {
         self.inner.reserve_exact(additional);
     }
@@ -272,6 +279,7 @@ where
 
     /// Returns true if an element exists for the generational index.
     #[must_use]
+    #[inline]
     pub fn contains_index(&self, gen_index: GenIndex) -> bool
     where
         GenIndex: Into<(I, G)>,
@@ -290,6 +298,7 @@ where
     ///
     /// * the index is out of bounds
     /// * the generation of the generational index is not equal to the generation associated with the element
+    #[inline]
     pub fn get(&self, gen_index: GenIndex) -> Result<&T, Error>
     where
         GenIndex: Into<(I, G)>,
@@ -308,6 +317,7 @@ where
     ///
     /// * the index is out of bounds
     /// * the generation of the generational index is not equal to the generation associated with the element
+    #[inline]
     pub fn get_mut(&mut self, gen_index: GenIndex) -> Result<&mut T, Error>
     where
         GenIndex: Into<(I, G)>,
@@ -323,6 +333,7 @@ where
     /// # Safety
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
+    #[inline]
     pub unsafe fn get_unchecked(&self, gen_index: GenIndex) -> &T
     where
         GenIndex: Into<(I, G)>,
@@ -337,6 +348,7 @@ where
     /// # Safety
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
+    #[inline]
     pub unsafe fn get_unchecked_mut(&mut self, gen_index: GenIndex) -> &mut T
     where
         GenIndex: Into<(I, G)>,
@@ -360,6 +372,7 @@ where
     ///
     /// * if the generation is greater than the current generation associated
     /// with the element.
+    #[inline]
     pub fn set(&mut self, gen_index: GenIndex, value: T) -> Result<(G, T), Error>
     where
         GenIndex: Into<(I, G)>,

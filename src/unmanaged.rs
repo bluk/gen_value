@@ -130,6 +130,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// See [`Vec::len`] for additional information.
     #[must_use]
+    #[inline]
     pub fn len(&self) -> usize {
         self.inner.len()
     }
@@ -138,6 +139,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// See [`Vec::is_empty`] for additional information.
     #[must_use]
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -146,6 +148,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// See [`Vec::capacity`] for additional information.
     #[must_use]
+    #[inline]
     pub fn capacity(&self) -> usize {
         self.inner.capacity()
     }
@@ -153,6 +156,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Reserves additional capacity of the inner [`Vec`].
     ///
     /// See [`Vec::reserve`] for additional information.
+    #[inline]
     pub fn reserve(&mut self, additional: usize) {
         self.inner.reserve(additional);
     }
@@ -160,6 +164,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Reserves additional capacity of the inner [`Vec`].
     ///
     /// See [`Vec::reserve_exact`] for additional information.
+    #[inline]
     pub fn reserve_exact(&mut self, additional: usize) {
         self.inner.reserve_exact(additional);
     }
@@ -179,11 +184,13 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Pushes a generation and value to the end of the inner [`Vec`].
     ///
     /// See [`Vec::push`] for additional information.
+    #[inline]
     pub fn push(&mut self, generation: G, value: T) {
         self.inner.push((generation, value));
     }
 
     /// Returns true if an element exists for the generational index.
+    #[inline]
     pub fn contains_index(&self, gen_index: GenIndex) -> bool
     where
         GenIndex: Into<(I, G)>,
@@ -252,6 +259,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// # Safety
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
+    #[inline]
     pub unsafe fn get_unchecked(&self, gen_index: GenIndex) -> &T
     where
         GenIndex: Into<(I, G)>,
@@ -268,6 +276,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// # Safety
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
+    #[inline]
     pub unsafe fn get_unchecked_mut(&mut self, gen_index: GenIndex) -> &mut T
     where
         GenIndex: Into<(I, G)>,
@@ -280,6 +289,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Returns the generation associated with the element at the index.
     ///
     /// Returns `None` if the index is out of bounds.
+    #[inline]
     pub fn get_gen(&self, index: I) -> Option<&G>
     where
         I: Into<usize>,
@@ -324,6 +334,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// * if the generation is greater than the current generation associated
     /// with the element. To increase the generation, a call to
     /// [`set_gen`][UnmanagedGenVec::set_gen] must be called first.
+    #[inline]
     pub fn set(&mut self, gen_index: GenIndex, value: T) -> Result<(G, T), Error>
     where
         GenIndex: Into<(I, G)>,
