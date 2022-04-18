@@ -58,7 +58,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
         bench_it!("GenVec::get", |b, &n| {
             b.iter_batched_ref(
                 || {
-                    let (data, indexes) = create_genvec_and_indexes::<T, u8, usize>(n);
+                    let (data, indexes) = create_genvec_and_indexes::<T, usize, usize>(n);
                     (data, indexes)
                 },
                 |(data, indexes)| {
@@ -76,7 +76,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
         bench_it!("GenVec::get_unchecked", |b, &n| {
             b.iter_batched_ref(
                 || {
-                    let (data, indexes) = create_genvec_and_indexes::<T, u8, usize>(n);
+                    let (data, indexes) = create_genvec_and_indexes::<T, usize, usize>(n);
                     (data, indexes)
                 },
                 |(data, indexes)| {
@@ -194,7 +194,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
         bench_it!("GenVec::get", |b, &n| {
             b.iter_batched_ref(
                 || {
-                    let (mut data, mut indexes) = create_genvec_and_indexes::<T, u8, usize>(n);
+                    let (mut data, mut indexes) = create_genvec_and_indexes::<T, usize, usize>(n);
                     indexes.shuffle(&mut rng);
                     (0..(n / 2)).for_each(|_| {
                         data.remove(indexes.pop().unwrap()).unwrap();
@@ -216,7 +216,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
         bench_it!("GenVec::get (sorted indexes)", |b, &n| {
             b.iter_batched_ref(
                 || {
-                    let (mut data, mut indexes) = create_genvec_and_indexes::<T, u8, usize>(n);
+                    let (mut data, mut indexes) = create_genvec_and_indexes::<T, usize, usize>(n);
                     indexes.shuffle(&mut rng);
                     (0..(n / 2)).for_each(|_| {
                         data.remove(indexes.pop().unwrap()).unwrap();
@@ -239,7 +239,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
         bench_it!("GenVec::get_unchecked", |b, &n| {
             b.iter_batched_ref(
                 || {
-                    let (mut data, mut indexes) = create_genvec_and_indexes::<T, u8, usize>(n);
+                    let (mut data, mut indexes) = create_genvec_and_indexes::<T, usize, usize>(n);
                     indexes.shuffle(&mut rng);
                     (0..(n / 2)).for_each(|_| {
                         data.remove(indexes.pop().unwrap()).unwrap();
@@ -261,7 +261,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
         bench_it!("GenVec::get_unchecked (sorted)", |b, &n| {
             b.iter_batched_ref(
                 || {
-                    let (mut data, mut indexes) = create_genvec_and_indexes::<T, u8, usize>(n);
+                    let (mut data, mut indexes) = create_genvec_and_indexes::<T, usize, usize>(n);
                     indexes.shuffle(&mut rng);
                     (0..(n / 2)).for_each(|_| {
                         data.remove(indexes.pop().unwrap()).unwrap();
@@ -406,7 +406,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
         bench_it!("GenVec::get", |b, &n| {
             b.iter_batched_ref(
                 || {
-                    let (data, mut indexes) = create_genvec_and_indexes::<T, u8, usize>(n);
+                    let (data, mut indexes) = create_genvec_and_indexes::<T, usize, usize>(n);
                     indexes.shuffle(&mut rng);
                     (data, indexes)
                 },
@@ -425,7 +425,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
         bench_it!("GenVec::get_unchecked", |b, &n| {
             b.iter_batched_ref(
                 || {
-                    let (data, mut indexes) = create_genvec_and_indexes::<T, u8, usize>(n);
+                    let (data, mut indexes) = create_genvec_and_indexes::<T, usize, usize>(n);
                     indexes.shuffle(&mut rng);
                     (data, indexes)
                 },
@@ -585,7 +585,7 @@ fn random_get_one_type<T: Copy + Default>(c: &mut Criterion) {
             };
         }
 
-        bench_gen_vec!(u64);
+        bench_gen_vec!(usize);
 
         bench_it!(format!("Vec::get::({})", ty_str!(T)), |b, &i| {
             b.iter_batched_ref(
@@ -640,9 +640,9 @@ fn random_get_one_type<T: Copy + Default>(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    iter_sequentially::<u64>,
-    iter_sequentially_half_elements_removed::<u64>,
-    random_get_all::<u64>,
-    random_get_one_type::<u64>,
+    iter_sequentially::<usize>,
+    iter_sequentially_half_elements_removed::<usize>,
+    random_get_all::<usize>,
+    random_get_one_type::<usize>,
 );
 criterion_main!(benches);

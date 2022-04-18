@@ -47,7 +47,7 @@ use crate::{Error, Incrementable};
 /// ## `G`
 ///
 /// `G` is the generation type. `G` is usually a type like [u16] or [u32].
-/// By default, G is a [u16].
+/// By default, G is a [usize].
 ///
 /// Generation types must implement:
 ///
@@ -96,7 +96,7 @@ use crate::{Error, Incrementable};
 /// * `Into<(I, G)> for GenIndex`
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(clippy::module_name_repetitions)]
-pub struct UnmanagedGenVec<T, G = u16, I = usize, GenIndex = (I, G)> {
+pub struct UnmanagedGenVec<T, G = usize, I = usize, GenIndex = (I, G)> {
     inner: Vec<(G, T)>,
     index_ty: PhantomData<I>,
     gen_index_ty: PhantomData<GenIndex>,

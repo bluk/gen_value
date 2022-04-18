@@ -100,7 +100,7 @@ use crate::{index::Allocator, unmanaged::UnmanagedGenVec, Error, Incrementable};
 /// ## `G`
 ///
 /// `G` is the generation type. `G` is usually a type like [u16] or [u32].
-/// By default, G is a [u16].
+/// By default, G is a [usize].
 ///
 /// Generation types must implement:
 ///
@@ -151,7 +151,7 @@ use crate::{index::Allocator, unmanaged::UnmanagedGenVec, Error, Incrementable};
 /// * `Into<(I, G)> for GenIndex`
 #[derive(Debug)]
 #[allow(clippy::module_name_repetitions)]
-pub struct GenVec<T, G = u16, I = usize, GenIndex = (I, G)> {
+pub struct GenVec<T, G = usize, I = usize, GenIndex = (I, G)> {
     allocator: Allocator<G, I, GenIndex>,
     inner: UnmanagedGenVec<T, G, I, GenIndex>,
 }

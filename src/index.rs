@@ -31,7 +31,7 @@ use crate::Incrementable;
 /// ## `G`
 ///
 /// `G` is the generation type. `G` is usually a type like [u16] or [u32].
-/// By default, G is a [u16].
+/// By default, G is a [usize].
 ///
 /// Generation types must implement:
 ///
@@ -82,7 +82,7 @@ use crate::Incrementable;
 /// * `From<(I, G)> for GenIndex`
 /// * `Into<(I, G)> for GenIndex`
 #[derive(Debug)]
-pub struct Allocator<G = u16, I = usize, GenIndex = (I, G)> {
+pub struct Allocator<G = usize, I = usize, GenIndex = (I, G)> {
     next_index: Option<I>,
     avail_gen_indexes: Vec<GenIndex>,
     // A temporary variable to store the next generation of the last dealloced variable.

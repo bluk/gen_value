@@ -33,14 +33,15 @@ use gen_value::{vec::GenVec, Error};
 #[derive(Debug, PartialEq)]
 struct Value<T>(T);
 
-// The element type is `Value<u32>`.
-// The generation type by default is a `u16`.
-// The index type by default is a `usize`.
-// The generational index type by default is a tuple `(usize, u16)`.
+// * The element type is `Value<u32>`.
+// * The generation type by default is a `usize`.
+// * The index type by default is a `usize`.
+// * The generational index type (index type, generation type)
+//   by default is a tuple `(usize, usize)`.
 let mut gen_vec = GenVec::<Value<u32>>::default();
 
 // Insert entities
-let first_entity_index: (usize, u16) = gen_vec.insert(Value(42))?;
+let first_entity_index: (usize, usize) = gen_vec.insert(Value(42))?;
 let other_entity_index = gen_vec.insert(Value(9))?;
 assert_eq!(gen_vec.get(first_entity_index).ok(), Some(&Value(42)));
 assert_eq!(*gen_vec.get(other_entity_index)?, Value(9));
