@@ -82,7 +82,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 |(data, indexes)| {
                     let mut total = T::default();
                     for idx in indexes.iter() {
-                        let value = unsafe { data.get_unchecked(*idx) };
+                        let value = unsafe { data.get_unchecked(idx.0) };
                         total += *value;
                     }
                     total
@@ -249,7 +249,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 |(data, indexes)| {
                     let mut total = T::default();
                     for idx in indexes.iter() {
-                        let value = unsafe { data.get_unchecked(*idx) };
+                        let value = unsafe { data.get_unchecked(idx.0) };
                         total += *value;
                     }
                     total
@@ -272,7 +272,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 |(data, indexes)| {
                     let mut total = T::default();
                     for idx in indexes.iter() {
-                        let value = unsafe { data.get_unchecked(*idx) };
+                        let value = unsafe { data.get_unchecked(idx.0) };
                         total += *value;
                     }
                     total
@@ -432,7 +432,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 |(data, indexes)| {
                     let mut total = T::default();
                     for idx in indexes.iter() {
-                        let value = unsafe { data.get_unchecked(*idx) };
+                        let value = unsafe { data.get_unchecked(idx.0) };
                         total += *value;
                     }
                     total
@@ -577,7 +577,7 @@ fn random_get_one_type<T: Copy + Default>(c: &mut Criterion) {
                                 indexes.shuffle(&mut rng);
                                 (data, indexes.into_iter().cycle())
                             },
-                            |(data, index)| unsafe { *data.get_unchecked(index.next().unwrap()) },
+                            |(data, index)| unsafe { *data.get_unchecked(index.next().unwrap().0) },
                             BatchSize::SmallInput,
                         );
                     }

@@ -272,13 +272,9 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
     #[inline]
-    pub unsafe fn get_unchecked(&self, gen_index: GenIndex) -> &T
-    where
-        GenIndex: Into<(I, G)>,
-        I: Into<usize>,
-    {
-        let gen_index = gen_index.into();
-        &self.inner.get_unchecked(gen_index.0.into()).1
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> &T {
+        &self.inner.get_unchecked(index).1
     }
 
     /// Returns a mutable reference to the element at the given index.
@@ -289,13 +285,9 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
     #[inline]
-    pub unsafe fn get_unchecked_mut(&mut self, gen_index: GenIndex) -> &mut T
-    where
-        GenIndex: Into<(I, G)>,
-        I: Into<usize>,
-    {
-        let gen_index = gen_index.into();
-        &mut self.inner.get_unchecked_mut(gen_index.0.into()).1
+    #[must_use]
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
+        &mut self.inner.get_unchecked_mut(index).1
     }
 
     /// Returns the generation associated with the element at the index.

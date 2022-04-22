@@ -334,11 +334,9 @@ where
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
     #[inline]
-    pub unsafe fn get_unchecked(&self, gen_index: GenIndex) -> &T
-    where
-        GenIndex: Into<(I, G)>,
-    {
-        self.inner.get_unchecked(gen_index)
+    #[must_use]
+    pub unsafe fn get_unchecked(&self, index: usize) -> &T {
+        self.inner.get_unchecked(index)
     }
 
     /// Returns a mutable reference to the element at the given index.
@@ -349,11 +347,9 @@ where
     ///
     /// There is no bounds check and no generation check performed. If the index is out of bounds, undefined behavior will occur.
     #[inline]
-    pub unsafe fn get_unchecked_mut(&mut self, gen_index: GenIndex) -> &mut T
-    where
-        GenIndex: Into<(I, G)>,
-    {
-        self.inner.get_unchecked_mut(gen_index)
+    #[must_use]
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
+        self.inner.get_unchecked_mut(index)
     }
 
     /// Sets a value at the given index if the generation is equal to the
