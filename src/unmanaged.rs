@@ -202,6 +202,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     }
 
     /// Returns true if an element exists for the generational index.
+    #[must_use]
     #[inline]
     pub fn contains_index(&self, gen_index: GenIndex) -> bool
     where
