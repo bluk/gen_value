@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.6.0] - 2022-04-22
+
+### Updated
+
+- Use usize index for get_unchecked*
+
+  For performance reasons, change the get_unchecked* methods to use a
+  direct usize. Removes the need to pass in the entire generational
+  index and call the Into<usize>::into(). The assumption is that the
+  caller can get the index from the generational index into a usize.
+
+  There may be multiple vectors which may need to be indexed using the
+  same index, so avoid having to possibly convert the generational index
+  into a usize index multiple times.
+
+  In the worst case, the get_unchecked* method can be added via a trait
+  which has a generational index parameter and pass the usize index into
+  the get_unchecked* method.
+
 ## [0.5.0] - 2022-04-18
 
 ### Updated
@@ -85,6 +104,7 @@
 - Initial release
 
 [Unreleased]: https://github.com/bluk/gen_value/compare/v0.5.0...HEAD
+[0.6.0]: https://github.com/bluk/gen_value/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/bluk/gen_value/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/bluk/gen_value/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/bluk/gen_value/compare/v0.2.0...v0.3.0
