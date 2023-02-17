@@ -436,6 +436,35 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
             Err(Error::less_than_existing_generation())
         }
     }
+
+    /// Sets the generation for an index.
+    ///
+    /// Any existing generational indexes equal to or greater than the given
+    /// generation could be considered valid again.
+    ///
+    /// Normally, this method should never be called in a program. In
+    /// exceptional conditions (such as when an index has exhausted all
+    /// generations and all generational indexes referencing the index have been
+    /// removed from the program), the method could be called.
+    ///
+    /// # Errors
+    ///
+    /// Errors are returned if:
+    ///
+    /// * the index is out of bounds
+    pub fn set_gen(&mut self, gen_index: GenIndex) -> Result<G, Error>
+    where
+        GenIndex: Into<(I, G)>,
+        I: Into<usize>,
+    {
+        let (index, generation) = gen_index.into();
+        let elem = self
+            .inner
+            .get_mut(index.into())
+            .ok_or_else(Error::index_out_of_bounds)?;
+        let prev_value = core::mem::replace(&mut elem.0, generation);
+        Ok(prev_value)
+    }
 }
 
 impl<T, G, I, GenIndex> core::ops::Index<GenIndex> for UnmanagedGenVec<T, G, I, GenIndex>
