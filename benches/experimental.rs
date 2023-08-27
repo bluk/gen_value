@@ -63,7 +63,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = data.get(*idx).unwrap();
                         total += *value;
                     }
@@ -81,7 +81,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = unsafe { data.get_unchecked(idx.0) };
                         total += *value;
                     }
@@ -99,7 +99,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 move |data| {
                     let mut total = T::default();
-                    for value in data.iter() {
+                    for value in data {
                         total += *value;
                     }
                     total
@@ -116,7 +116,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 move |data| {
                     let mut total = T::default();
-                    for (_, value) in data.iter() {
+                    for value in data.values() {
                         total += *value;
                     }
                     total
@@ -150,7 +150,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 move |data| {
                     let mut total = T::default();
-                    for (_, value) in data.iter() {
+                    for value in data.values() {
                         total += *value;
                     }
                     total
@@ -203,7 +203,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 },
                 |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = data.get(*idx).unwrap();
                         total += *value;
                     }
@@ -226,7 +226,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 },
                 |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = data.get(*idx).unwrap();
                         total += *value;
                     }
@@ -248,7 +248,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 },
                 |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = unsafe { data.get_unchecked(idx.0) };
                         total += *value;
                     }
@@ -271,7 +271,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 },
                 |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = unsafe { data.get_unchecked(idx.0) };
                         total += *value;
                     }
@@ -290,7 +290,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 },
                 move |data| {
                     let mut total = T::default();
-                    for value in data.iter() {
+                    for value in data {
                         total += *value;
                     }
                     total
@@ -311,7 +311,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 },
                 move |data| {
                     let mut total = T::default();
-                    for (_, value) in data.iter() {
+                    for value in data.values() {
                         total += *value;
                     }
                     total
@@ -354,7 +354,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
                 },
                 move |data| {
                     let mut total = T::default();
-                    for (_, value) in data.iter() {
+                    for value in data.values() {
                         total += *value;
                     }
                     total
@@ -412,7 +412,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = data.get(*idx).unwrap();
                         total += *value;
                     }
@@ -431,7 +431,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = unsafe { data.get_unchecked(idx.0) };
                         total += *value;
                     }
@@ -450,7 +450,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 move |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = data.get(*idx).unwrap();
                         total += *value;
                     }
@@ -469,7 +469,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 move |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = unsafe { data.get_unchecked(*idx) };
                         total += *value;
                     }
@@ -488,7 +488,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 move |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = data.get(idx).unwrap();
                         total += *value;
                     }
@@ -507,7 +507,7 @@ fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
                 },
                 move |(data, indexes)| {
                     let mut total = T::default();
-                    for idx in indexes.iter() {
+                    for idx in indexes {
                         let value = data.get(idx).unwrap();
                         total += *value;
                     }

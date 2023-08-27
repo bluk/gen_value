@@ -260,6 +260,10 @@ where
     /// Errors are returned if:
     ///
     /// * a generational index cannot be created
+    ///
+    /// # Panics
+    ///
+    /// Panics if the index or generation has exceeded the maximum value possible.
     pub fn insert(&mut self, value: T) -> Result<GenIndex, Error>
     where
         GenIndex: From<(I, G)> + Into<(I, G)>,
