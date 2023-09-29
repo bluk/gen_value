@@ -1,43 +1,9 @@
-[package]
-name = "gen_value"
-version = "0.6.0"
-license = "MIT OR Apache-2.0"
-edition = "2021"
-authors = ["Bryant Luk <code@bryantluk.com>"]
-description = "A library for indexes and values with generations for vectors."
-keywords = ["generation", "ecs", "index"]
-categories = ["data-structures", "no-std", "rust-patterns"]
-repository = "https://github.com/bluk/gen_value"
-documentation = "https://docs.rs/gen_value/"
-readme = "README.md"
-include = [
-  "src/**/*.rs",
-  "benches/**/*.rs",
-  "Cargo.toml",
-  "README.md",
-  "LICENSE-APACHE",
-  "LICENSE-MIT",
+[workspace]
+resolver = "2"
+members = [
+  "gen_value",
 ]
-rust-version = "1.70.0"
 
-[features]
-default = ["std"]
-
-std = []
-
-alloc = []
-
-[dependencies]
-thiserror = "1"
-
-[dev-dependencies]
-criterion = "0.5.1"
-rand = "0.8"
-
-[[bench]]
-name = "experimental"
-harness = false
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+exclude = [
+  "benchmark",
+]

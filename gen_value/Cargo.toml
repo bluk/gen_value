@@ -1,0 +1,36 @@
+[package]
+authors = ["Bryant Luk <code@bryantluk.com>"]
+categories = ["data-structures", "no-std", "rust-patterns"]
+description = "A library for indexes and values with generations for vectors."
+documentation = "https://docs.rs/gen_value/"
+edition = "2021"
+include = [
+  "src/**/*.rs",
+  "benches/**/*.rs",
+  "Cargo.toml",
+  "CHANGELOG.md",
+  "README.md",
+  "LICENSE-APACHE",
+  "LICENSE-MIT",
+]
+keywords = ["generation", "ecs", "index"]
+license = "MIT OR Apache-2.0"
+name = "gen_value"
+readme = "README.md"
+repository = "https://github.com/bluk/gen_value"
+rust-version = "1.70.0"
+version = "0.6.0"
+
+[features]
+default = ["std"]
+
+std = []
+
+alloc = []
+
+[dependencies]
+thiserror = "1"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
