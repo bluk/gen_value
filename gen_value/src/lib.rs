@@ -20,6 +20,8 @@
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 extern crate alloc;
 
+use core::fmt;
+
 pub mod index;
 pub mod unmanaged;
 pub mod vec;
@@ -79,36 +81,52 @@ make_incremental_int_impl!(i32);
 make_incremental_int_impl!(i64);
 make_incremental_int_impl!(isize);
 
-#[cfg_attr(feature = "std", derive(thiserror::Error))]
 #[derive(Debug)]
 enum ErrorCode {
-    #[cfg_attr(feature = "std", error("index out of bounds"))]
     IndexOutOfBounds,
-    #[cfg_attr(
-        feature = "std",
-        error("generational index's generation is less than the existing element's generation")
-    )]
     LessThanExistingGeneration,
-    #[cfg_attr(
-        feature = "std",
-        error("element's generation does not equal the generation index's generation")
-    )]
     NotEqualGeneration,
-    #[cfg_attr(feature = "std", error("cannot allocate a generational index"))]
     CannotAllocateGenerationalIndex,
-    #[cfg_attr(
-        feature = "std",
-        error("generation is already equal to existing generation")
-    )]
     AlreadyEqualGeneration,
+}
+
+impl fmt::Display for ErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ErrorCode::IndexOutOfBounds => f.write_str("index out of bounds"),
+            ErrorCode::LessThanExistingGeneration => f.write_str(
+                "generational index's generation is less than the existing element's generation",
+            ),
+            ErrorCode::NotEqualGeneration => {
+                f.write_str("element's generation does not equal the generation index's generation")
+            }
+            ErrorCode::CannotAllocateGenerationalIndex => {
+                f.write_str("cannot allocate a generational index")
+            }
+            ErrorCode::AlreadyEqualGeneration => {
+                f.write_str("generation is already equal to existing generation")
+            }
+        }
+    }
 }
 
 /// Errors from calling [`GenVec`] and [`UnmanagedGenVec`][crate::unmanaged::UnmanagedGenVec] functions.
 #[derive(Debug)]
-#[cfg_attr(feature = "std", derive(thiserror::Error))]
-#[cfg_attr(feature = "std", error(transparent))]
 pub struct Error {
     code: ErrorCode,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> core::fmt::Result {
+        fmt::Display::fmt(&self.code, f)
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
 }
 
 impl Error {
