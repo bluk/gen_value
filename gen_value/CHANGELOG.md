@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.7.0] - 2023-09-29
+
+### Added
+
+- Add `UnmanagedGenVec::set_gen()` to set the generation for an index.
+
+  Allow directly setting the generation in extreme cases. The method
+  should not be used except in edge cases where an index has exhausted
+  all generations and all generational indexes have been dropped.
+
+- Set Minimum Supported Rust Version (MSRV) to `1.56.0`
+
+### Updated
+
+- Separate benchmark code into separate crate
+
+### Removed
+
+- Remove `thiserror` dependency and implement Error trait directly
+
 ## [0.6.0] - 2022-04-22
 
 ### Updated
@@ -103,7 +123,8 @@
 
 - Initial release
 
-[Unreleased]: https://github.com/bluk/gen_value/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/bluk/gen_value/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/bluk/gen_value/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/bluk/gen_value/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/bluk/gen_value/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/bluk/gen_value/compare/v0.3.0...v0.4.0
