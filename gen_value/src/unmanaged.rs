@@ -233,7 +233,13 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
         self.inner
             .get(gen_index.0.into())
             .ok_or_else(Error::index_out_of_bounds)
-            .map(|(gen, elem)| (gen_index.1 == *gen).then_some(elem))?
+            .map(|(gen, elem)| {
+                if gen_index.1 == *gen {
+                    Some(elem)
+                } else {
+                    None
+                }
+            })?
             .ok_or_else(Error::not_equal_generation)
     }
 

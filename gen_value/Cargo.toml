@@ -18,7 +18,7 @@ license = "MIT OR Apache-2.0"
 name = "gen_value"
 readme = "README.md"
 repository = "https://github.com/bluk/gen_value"
-rust-version = "1.70.0"
+rust-version = "1.56.0"
 version = "0.6.0"
 
 [features]
