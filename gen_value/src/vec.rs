@@ -75,7 +75,7 @@
 //! The limits are important to keep in mind, but in practice, with a sufficient
 //! sized index and generation type, the limits will never be encounted.
 
-use crate::{index::Allocator, unmanaged::UnmanagedGenVec, Error, Incrementable};
+use crate::{Error, Incrementable, index::Allocator, unmanaged::UnmanagedGenVec};
 
 /// `Vec` indexed with generational indexes.
 ///
@@ -340,7 +340,7 @@ where
     #[inline]
     #[must_use]
     pub unsafe fn get_unchecked(&self, index: usize) -> &T {
-        self.inner.get_unchecked(index)
+        unsafe { self.inner.get_unchecked(index) }
     }
 
     /// Returns a mutable reference to the element at the given index.
@@ -353,7 +353,7 @@ where
     #[inline]
     #[must_use]
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
-        self.inner.get_unchecked_mut(index)
+        unsafe { self.inner.get_unchecked_mut(index) }
     }
 
     /// Sets a value at the given index if the generation is equal to the
@@ -485,8 +485,8 @@ mod tests {
     fn test_insert_generational_index_unavailable_by_generation() {
         let mut gen_vec = GenVec::<Value<(u8, u8)>, u8, u8>::default();
         for idx in 0..=u8::MAX {
-            for gen in 0..u8::MAX {
-                let gen_index = gen_vec.insert(Value((idx, gen))).unwrap();
+            for generation in 0..u8::MAX {
+                let gen_index = gen_vec.insert(Value((idx, generation))).unwrap();
                 gen_vec.remove(gen_index).unwrap();
             }
         }
@@ -730,18 +730,22 @@ mod tests {
         {
             let get_first_entity_result = gen_vec.get(first_entity_index);
             assert!(get_first_entity_result.is_err());
-            assert!(get_first_entity_result
-                .unwrap_err()
-                .is_not_equal_generation_error());
+            assert!(
+                get_first_entity_result
+                    .unwrap_err()
+                    .is_not_equal_generation_error()
+            );
         }
 
         // Cannot set first entity's value
         {
             let set_first_entity_result = gen_vec.set(first_entity_index, Value(1002));
             assert!(set_first_entity_result.is_err());
-            assert!(set_first_entity_result
-                .unwrap_err()
-                .is_generation_less_than_existing());
+            assert!(
+                set_first_entity_result
+                    .unwrap_err()
+                    .is_generation_less_than_existing()
+            );
         }
 
         // Other entity can still be retrieved with same index and length is still 2

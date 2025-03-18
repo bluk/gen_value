@@ -128,26 +128,26 @@ impl<G, I, GenIndex> Allocator<G, I, GenIndex> {
     /// #[derive(Debug, PartialEq)]
     /// struct MyGenIndex {
     ///   index: usize,
-    ///   gen: u32,
+    ///   generation: u32,
     /// }
     ///
     /// impl From<(usize, u32)> for MyGenIndex {
     ///   fn from(value: (usize, u32)) -> Self {
     ///     Self {
     ///       index: value.0,
-    ///       gen: value.1,
+    ///       generation: value.1,
     ///     }
     ///   }
     /// }
     ///
     /// impl From<MyGenIndex> for (usize, u32) {
     ///   fn from(value: MyGenIndex) -> Self {
-    ///     (value.index, value.gen)
+    ///     (value.index, value.generation)
     ///   }
     /// }
     ///
     /// let mut gen_index_alloc = Allocator::<u32, usize, MyGenIndex>::new();
-    /// assert_eq!(gen_index_alloc.alloc(), Some(MyGenIndex { index: 0usize, gen: 0u32 }));
+    /// assert_eq!(gen_index_alloc.alloc(), Some(MyGenIndex { index: 0usize, generation: 0u32 }));
     /// ```
     #[must_use]
     pub fn new() -> Self
@@ -226,26 +226,26 @@ where
     /// #[derive(Debug, PartialEq)]
     /// struct MyGenIndex {
     ///   index: usize,
-    ///   gen: u32,
+    ///   generation: u32,
     /// }
     ///
     /// impl From<(usize, u32)> for MyGenIndex {
     ///   fn from(value: (usize, u32)) -> Self {
     ///     Self {
     ///       index: value.0,
-    ///       gen: value.1,
+    ///       generation: value.1,
     ///     }
     ///   }
     /// }
     ///
     /// impl From<MyGenIndex> for (usize, u32) {
     ///   fn from(value: MyGenIndex) -> Self {
-    ///     (value.index, value.gen)
+    ///     (value.index, value.generation)
     ///   }
     /// }
     ///
     /// let mut gen_index_alloc = Allocator::<u32, usize, MyGenIndex>::default();
-    /// assert_eq!(gen_index_alloc.alloc(), Some(MyGenIndex { index: 0usize, gen: 0u32 }));
+    /// assert_eq!(gen_index_alloc.alloc(), Some(MyGenIndex { index: 0usize, generation: 0u32 }));
     /// ```
     #[must_use]
     pub fn alloc(&mut self) -> Option<GenIndex>
@@ -320,39 +320,39 @@ where
     /// #[derive(Debug, PartialEq)]
     /// struct MyGenIndex {
     ///   index: usize,
-    ///   gen: u32,
+    ///   generation: u32,
     /// }
     ///
     /// impl From<(usize, u32)> for MyGenIndex {
     ///   fn from(value: (usize, u32)) -> Self {
     ///     Self {
     ///       index: value.0,
-    ///       gen: value.1,
+    ///       generation: value.1,
     ///     }
     ///   }
     /// }
     ///
     /// impl From<MyGenIndex> for (usize, u32) {
     ///   fn from(value: MyGenIndex) -> Self {
-    ///     (value.index, value.gen)
+    ///     (value.index, value.generation)
     ///   }
     /// }
     ///
     /// let mut gen_index_alloc = Allocator::<u32, usize, MyGenIndex>::default();
     ///
     /// let gen_index_0 = gen_index_alloc.alloc().unwrap();
-    /// assert_eq!(gen_index_0, MyGenIndex { index: 0usize, gen: 0u32 });
+    /// assert_eq!(gen_index_0, MyGenIndex { index: 0usize, generation: 0u32 });
     ///
     /// let gen_index_1 = gen_index_alloc.alloc();
-    /// assert_eq!(gen_index_1, Some(MyGenIndex { index: 1usize, gen: 0u32 }));
+    /// assert_eq!(gen_index_1, Some(MyGenIndex { index: 1usize, generation: 0u32 }));
     ///
     /// // Dealloc the first generational index
     /// let next_gen_index = gen_index_alloc.dealloc(gen_index_0);
-    /// assert_eq!(next_gen_index, Some(&MyGenIndex { index: 0usize, gen: 1u32 }));
+    /// assert_eq!(next_gen_index, Some(&MyGenIndex { index: 0usize, generation: 1u32 }));
     ///
     /// // Generation increased
     /// let gen_index_0_again = gen_index_alloc.alloc();
-    /// assert_eq!(gen_index_0_again, Some(MyGenIndex { index: 0usize, gen: 1u32  }));
+    /// assert_eq!(gen_index_0_again, Some(MyGenIndex { index: 0usize, generation: 1u32  }));
     /// ```
     pub fn dealloc(&mut self, gen_index: GenIndex) -> Option<&GenIndex>
     where
@@ -419,19 +419,19 @@ mod tests {
     fn test_alloc_with_custom_type() {
         struct MyIndex {
             index: usize,
-            gen: u32,
+            generation: u32,
         }
         impl From<(usize, u32)> for MyIndex {
             fn from(value: (usize, u32)) -> Self {
                 Self {
                     index: value.0,
-                    gen: value.1,
+                    generation: value.1,
                 }
             }
         }
         impl From<MyIndex> for (usize, u32) {
             fn from(value: MyIndex) -> Self {
-                (value.index, value.gen)
+                (value.index, value.generation)
             }
         }
 
@@ -441,14 +441,14 @@ mod tests {
         let gen_idx_0 = gen_idx_0.unwrap();
         {
             assert_eq!(gen_idx_0.index, 0);
-            assert_eq!(gen_idx_0.gen, 0);
+            assert_eq!(gen_idx_0.generation, 0);
         }
 
         {
             let gen_idx_1 = gen_idx_alloc.alloc();
             let gen_idx_1 = gen_idx_1.unwrap();
             assert_eq!(gen_idx_1.index, 1);
-            assert_eq!(gen_idx_1.gen, 0);
+            assert_eq!(gen_idx_1.generation, 0);
         }
 
         gen_idx_alloc.dealloc(gen_idx_0);
@@ -457,7 +457,7 @@ mod tests {
             let gen_idx_0_again = gen_idx_alloc.alloc();
             let gen_idx_0_again = gen_idx_0_again.unwrap();
             assert_eq!(gen_idx_0_again.index, 0);
-            assert_eq!(gen_idx_0_again.gen, 1);
+            assert_eq!(gen_idx_0_again.generation, 1);
         }
     }
 

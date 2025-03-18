@@ -233,8 +233,8 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
         self.inner
             .get(gen_index.0.into())
             .ok_or_else(Error::index_out_of_bounds)
-            .map(|(gen, elem)| {
-                if gen_index.1 == *gen {
+            .map(|(generation, elem)| {
+                if gen_index.1 == *generation {
                     Some(elem)
                 } else {
                     None
@@ -281,7 +281,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     #[inline]
     #[must_use]
     pub unsafe fn get_unchecked(&self, index: usize) -> &T {
-        &self.inner.get_unchecked(index).1
+        unsafe { &self.inner.get_unchecked(index).1 }
     }
 
     /// Returns a mutable reference to the element at the given index.
@@ -294,7 +294,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     #[inline]
     #[must_use]
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut T {
-        &mut self.inner.get_unchecked_mut(index).1
+        unsafe { &mut self.inner.get_unchecked_mut(index).1 }
     }
 
     /// Returns the generation associated with the element at the index.
@@ -305,7 +305,9 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     where
         I: Into<usize>,
     {
-        self.inner.get(index.into()).map(|(gen, _value)| gen)
+        self.inner
+            .get(index.into())
+            .map(|(generation, _value)| generation)
     }
 
     fn internal_set(&mut self, index: usize, generation: G, value: T) -> Result<(G, T), Error>

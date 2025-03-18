@@ -3,7 +3,7 @@ authors = ["Bryant Luk <code@bryantluk.com>"]
 categories = ["data-structures", "no-std", "rust-patterns"]
 description = "A library for indexes and values with generations for vectors."
 documentation = "https://docs.rs/gen_value/"
-edition = "2021"
+edition = "2024"
 include = [
   "src/**/*.rs",
   "benches/**/*.rs",
@@ -18,7 +18,7 @@ license = "MIT OR Apache-2.0"
 name = "gen_value"
 readme = "README.md"
 repository = "https://github.com/bluk/gen_value"
-rust-version = "1.56.0"
+rust-version = "1.85.0"
 version = "0.7.0"
 
 [features]
