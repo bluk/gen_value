@@ -331,20 +331,21 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     /// Sets a value at the given index if the generation is equal to the
     /// generation associated with the existing element.
     ///
-    /// Returns the previous generation and the value for the element if successful.
+    /// Returns the previous generation and the value for the element if
+    /// successful.
     ///
     /// # Errors
     ///
     /// Errors are returned if:
     ///
-    /// * the index is out of bounds
-    /// * the generation of the generational index is less than the generation associated with the element
+    /// * the index is out of bounds * the generation of the generational index
+    ///   is less than the generation associated with the element
     ///
     /// # Panics
     ///
     /// * if the generation is greater than the current generation associated
-    /// with the element. To increase the generation, a call to
-    /// [`set_next_gen`][UnmanagedGenVec::set_next_gen] must be called first.
+    ///   with the element. To increase the generation, a call to
+    ///   [`set_next_gen`][UnmanagedGenVec::set_next_gen] must be called first.
     #[inline]
     pub fn set(&mut self, gen_index: GenIndex, value: T) -> Result<(G, T), Error>
     where
@@ -378,8 +379,8 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// * if the index is greater than the length of the inner vector
     /// * if the generation is greater than the current generation associated
-    /// with the element. To increase the generation, a call to
-    /// [`set_next_gen`][UnmanagedGenVec::set_next_gen] must be called first.
+    ///   with the element. To increase the generation, a call to
+    ///   [`set_next_gen`][UnmanagedGenVec::set_next_gen] must be called first.
     pub fn set_or_push(&mut self, gen_index: GenIndex, value: T) -> Result<Option<(G, T)>, Error>
     where
         GenIndex: Into<(I, G)>,
@@ -412,7 +413,7 @@ impl<T, G, I, GenIndex> UnmanagedGenVec<T, G, I, GenIndex> {
     ///
     /// * the index is out of bounds
     /// * the generation is less than or equal to the existing generation associated with
-    /// the element
+    ///   the element
     ///
     /// # Panics
     ///

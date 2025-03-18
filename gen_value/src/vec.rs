@@ -30,11 +30,11 @@
 //! ## Benefits
 //!
 //! * Generational indexes can be stored by other parts of the program and
-//! guaranteed to always reference the same value (until it is removed)
+//!   guaranteed to always reference the same value (until it is removed)
 //! * The underlying Vec will not need to move elements when elements are removed
 //! * Once an element is removed by increasing the generation at the index,
-//! existing generational indexes for the index will be effectively invalidated
-//! (because the stored indexes do not have the correct generation)
+//!   existing generational indexes for the index will be effectively invalidated
+//!   (because the stored indexes do not have the correct generation)
 //! * Access is still relatively fast
 //! * Memory is reused when possible (by re-using an index in a [`Vec`])
 //!
@@ -42,35 +42,35 @@
 //!
 //! * Values are not dropped until a new value is set for the index (if ever).
 //! * The maximum generation value serves as a tombstone value. So for a [u8],
-//! an element with `255` as the generation indicates the index's value as
-//! unaccessible. A generational index with `255` as the generation is never
-//! used to access a value. The last generation value being used as a tombstone
-//! value was chosen instead of something like `Option<(G, T)>` for efficiency
-//! purposes (saves some memory and removes a small check). However, the major
-//! drawback is that the last value will never be dropped so if a value has any
-//! logic done during a drop, it will never be executed.
+//!   an element with `255` as the generation indicates the index's value as
+//!   unaccessible. A generational index with `255` as the generation is never
+//!   used to access a value. The last generation value being used as a tombstone
+//!   value was chosen instead of something like `Option<(G, T)>` for efficiency
+//!   purposes (saves some memory and removes a small check). However, the major
+//!   drawback is that the last value will never be dropped so if a value has any
+//!   logic done during a drop, it will never be executed.
 //! * The `GenVec` does not reclaim unused memory. While the `GenVec` can re-use
-//! indexes with increases in the generation, the length will be equal to at
-//! least the largest number of concurrently active elements during a program's
-//! execution. If there are 200 concurrent active entities, then the
-//! `GenVec` will always have at least a length of 200 for the remainder of the
-//! program's execution.
+//!   indexes with increases in the generation, the length will be equal to at
+//!   least the largest number of concurrently active elements during a program's
+//!   execution. If there are 200 concurrent active entities, then the
+//!   `GenVec` will always have at least a length of 200 for the remainder of the
+//!   program's execution.
 //! * Note that the limit for the maximum number of concurrently active elements
-//! can decrease over time. Initially, the maximum number is equivalent to the
-//! maximum number of elements possible in a [`Vec`] (a [usize]). If a single
-//! index is reused through all of the generational cycles, then the index can
-//! no longer be used, so the limit for the maximum number of concurrently active
-//! elements decreases. If a generation is represented with a [u8], imagine 255
-//! active entities but only 1 entity is ever active at a time. All
-//! of the generations would be exhausted at index `0`, so after that point,
-//! `usize::MAX` - `1` is the theoretical maximum number of concurrently active
-//! elements (actually only `isize::MAX` - 1 due to the limits of `Vec`).
-//! The memory for index `0` is essentially leaked at that point.
+//!   can decrease over time. Initially, the maximum number is equivalent to the
+//!   maximum number of elements possible in a [`Vec`] (a [usize]). If a single
+//!   index is reused through all of the generational cycles, then the index can
+//!   no longer be used, so the limit for the maximum number of concurrently active
+//!   elements decreases. If a generation is represented with a [u8], imagine 255
+//!   active entities but only 1 entity is ever active at a time. All
+//!   of the generations would be exhausted at index `0`, so after that point,
+//!   `usize::MAX` - `1` is the theoretical maximum number of concurrently active
+//!   elements (actually only `isize::MAX` - 1 due to the limits of `Vec`).
+//!   The memory for index `0` is essentially leaked at that point.
 //! * There is a limit to the total number of elements that can ever be stored
-//! by the `GenVec`. If a generation is represented with a [u8], then there are
-//! 255 generations per index. Assume that all indexes can eventually be used
-//! and indexes are represented by a [u32]. Then, (2^8 - 1) * 2^32 = (2^40 -
-//! 2^32) = 1.095 trillion total elements can ever be stored.
+//!   by the `GenVec`. If a generation is represented with a [u8], then there are
+//!   255 generations per index. Assume that all indexes can eventually be used
+//!   and indexes are represented by a [u32]. Then, (2^8 - 1) * 2^32 = (2^40 -
+//!   2^32) = 1.095 trillion total elements can ever be stored.
 //!
 //! The limits are important to keep in mind, but in practice, with a sufficient
 //! sized index and generation type, the limits will never be encounted.
@@ -371,7 +371,7 @@ where
     /// # Panics
     ///
     /// * if the generation is greater than the current generation associated
-    /// with the element.
+    ///   with the element.
     #[inline]
     pub fn set(&mut self, gen_index: GenIndex, value: T) -> Result<(G, T), Error>
     where
@@ -393,7 +393,7 @@ where
     /// # Panics
     ///
     /// * if the generation is greater than the current generation associated
-    /// with the element.
+    ///   with the element.
     /// * if the generation could not be incremented
     pub fn remove(&mut self, gen_index: GenIndex) -> Result<(), Error>
     where
