@@ -182,7 +182,7 @@ fn iter_sequentially<T: Copy + Default + AddAssign>(c: &mut Criterion) {
 #[allow(clippy::too_many_lines)]
 fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mut Criterion) {
     let mut group = c.benchmark_group("iter_sequentially_half_elements_removed");
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
     for n in [32, 64, 256, 1024] {
         group.throughput(Throughput::Elements(u64::try_from(n).unwrap()));
         macro_rules! bench_it {
@@ -391,7 +391,7 @@ fn iter_sequentially_half_elements_removed<T: Copy + Default + AddAssign>(c: &mu
 #[allow(clippy::too_many_lines)]
 fn random_get_all<T: Copy + Default + AddAssign>(c: &mut Criterion) {
     let mut group = c.benchmark_group("random_get_all");
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
     // let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
     // group.plot_config(plot_config);
     // for n in [8, 16, 32, 64, 128, 256, 512, 1024] {
@@ -528,7 +528,7 @@ macro_rules! ty_str {
 
 fn random_get_one_type<T: Copy + Default>(c: &mut Criterion) {
     let mut group = c.benchmark_group("random_get_one");
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
     // let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
     // group.plot_config(plot_config);

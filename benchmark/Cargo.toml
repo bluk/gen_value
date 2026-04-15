@@ -13,7 +13,7 @@ gen_value = { path = "../gen_value", features = ["std"] }
 
 [dev-dependencies]
 criterion = "0.5.1"
-rand = "0.8"
+rand = "0.10"
 
 [[bench]]
 name = "experimental"
